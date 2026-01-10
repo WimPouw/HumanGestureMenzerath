@@ -1,4 +1,5 @@
 HumanGestureMenzerathAltman/
+```text
 ├── Code_Processing/          # Python scripts for processing skeleton data
 ├── Data_Input/               # Input data (anonymized)
 │   ├── Gesture/              # Gesture skeleton files (.npz, .mp4) per corpus
@@ -13,5 +14,8 @@ HumanGestureMenzerathAltman/
 ├── main_analysis_1.qmd       # Main analysis R (Quarto document) -> THIS IS RUN IN RMARKDOWN
 ├── _quarto.yml               # Quarto configuration
 └── README.md
+```
+
+Notebook: https://wimpouw.github.io/HumanGestureMenzerathAltman/main_analysis_1.html
 
 contact: w.pouw@tilburguniversity.edu, kadava@leibniz-zas.de, fuchs@leibniz-zas.de
