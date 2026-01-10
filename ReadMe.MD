@@ -14,4 +14,4 @@ HumanGestureMenzerathAltman/
 ├── _quarto.yml               # Quarto configuration
 └── README.md
 
-contact: w.pouw@tilburguniversity.edu
+contact: w.pouw@tilburguniversity.edu, kadava@leibniz-zas.de, fuchs@leibniz-zas.de
