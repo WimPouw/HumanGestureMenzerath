@@ -1,6 +1,12 @@
 HumanGestureMenzerathAltman/
 ```text
 ├── Code_Processing/          # Python scripts for processing skeleton data
+│   └── process_gestures.py   # Extracts submovements from .npz skeleton files
+│                             # - Detects speed peaks (15cm p/s)
+│                             # - Computes submovement durations, path lengths
+│                             # - Outputs gestures_flat.csv and gestures_long.csv
+│   └── tracking.py           # - Mediapipe holistic tracking script on non-anonymized data
+│   └── animation_creation.py # - anonymized animations of each gesture showing upper body 3D skeleton data
 ├── Data_Input/               # Input data (anonymized)
 │   ├── Gesture/              # Gesture skeleton files (.npz, .mp4) per corpus
 │   └── Objman/               # Object manipulation files (.npz, .mp4) (ECOLANG only)
