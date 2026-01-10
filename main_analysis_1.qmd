@@ -301,7 +301,7 @@ menz_coef_table %>%
                 full_width = FALSE)
 ```
 
-# Per-corpus modeling and individual variability
+# Per-corpus modeling, individual variability, and log-log vs. linear
 
 ::: {.callout-note .callout-download collapse="true"}
 # Per-corpus model fitting
