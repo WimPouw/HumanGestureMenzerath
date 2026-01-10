@@ -11,8 +11,6 @@ contact:
     email: ""
 ---
 
-# Overview
-
 ::: {.callout-note .callout-download collapse="true"}
 # Code for dataset loading, plotting defaults
 
@@ -104,6 +102,9 @@ library(equatiomatic)
 
 # remove any rows with single submovement gestures
 gesdat <- gesdat[gesdat$n_submovements > 1, ]
+
+# basemodel
+basemodel <- lmer(scale(log(subm_dur_ms)) ~ 1 + (1|corpus/speaker/gesture_id), data = gesdat)
 
 # Basic Menzerath model with corpus in random structure
 gesture_menz_model <- lmer(scale(log(subm_dur_ms)) ~ scale(log(n_submovements)) + (1|corpus/speaker/gesture_id), data = gesdat)
@@ -208,9 +209,44 @@ ggsave(paste0(current_dir, "/plots/menzerath_combined.svg"), p_combined, width =
 library(knitr)
 library(kableExtra)
 library(dplyr)
+library(MuMIn)
+
+# Model comparison: base vs Menzerath model
+anova_base_menz <- anova(basemodel, gesture_menz_model)
+
+# Extract ANOVA stats
+anova_chisq <- round(anova_base_menz$Chisq[2], 2)
+anova_df <- anova_base_menz$Df[2]
+anova_p <- anova_base_menz$`Pr(>Chisq)`[2]
+anova_p_fmt <- ifelse(anova_p < 0.001, "< 0.001", sprintf("= %.3f", anova_p))
+
+# AIC comparison
+aic_base <- round(AIC(basemodel), 1)
+aic_menz <- round(AIC(gesture_menz_model), 1)
+delta_aic_base <- round(aic_menz - aic_base, 1)
+
+# R2 for transformed (log-log) vs non-transformed
+r2_trans <- r.squaredGLMM(gesture_menz_model)
+
+r2_trans_fixed <- sprintf("%.3f", r2_trans[1, "R2m"])
+r2_trans_total <- sprintf("%.3f", r2_trans[1, "R2c"])
+
+# Model comparison table
+model_comparison <- data.frame(
+  Comparison = c("Base vs. Menzerath"),
+  Chi_sq = anova_chisq,
+  df = anova_df,
+  p = anova_p_fmt,
+  AIC_base = aic_base,
+  AIC_model = aic_menz,
+  delta_AIC = delta_aic_base
+)
 
 # Get coefficient summary from the basic model
 sum_basic <- coef(summary(gesture_menz_model))
+
+# 95% CI for coefficients
+ci_menz <- confint(gesture_menz_model, method = "Wald")
 
 # Extract values for inline reporting
 menz_slope <- sprintf("%.3f", sum_basic[2, "Estimate"])
@@ -219,37 +255,48 @@ menz_slope_t <- sprintf("%.2f", sum_basic[2, "t value"])
 menz_slope_p <- ifelse(sum_basic[2, "Pr(>|t|)"] < 0.001, "< 0.001", 
                        sprintf("= %.3f", sum_basic[2, "Pr(>|t|)"]))
 
-# Create basic Menzerath model coefficient table
+# Create basic Menzerath model coefficient table with CI
 menz_coef_table <- data.frame(
   Parameter = c("Intercept", "log(Number of Submovements)"),
   Estimate = c(sum_basic[1, "Estimate"], sum_basic[2, "Estimate"]),
   SE = c(sum_basic[1, "Std. Error"], sum_basic[2, "Std. Error"]),
+  CI_low = c(ci_menz["(Intercept)", 1], ci_menz["scale(log(n_submovements))", 1]),
+  CI_high = c(ci_menz["(Intercept)", 2], ci_menz["scale(log(n_submovements))", 2]),
   t_value = c(sum_basic[1, "t value"], sum_basic[2, "t value"]),
   p_value = c(sum_basic[1, "Pr(>|t|)"], sum_basic[2, "Pr(>|t|)"])
 )
 
-# Format p-values
+# Format columns
 menz_coef_table$p_formatted <- ifelse(menz_coef_table$p_value < 0.001, "< 0.001",
                                       sprintf("%.3f", menz_coef_table$p_value))
-menz_coef_table$Estimate <- sprintf("%.3f", menz_coef_table$Estimate)
-menz_coef_table$SE <- sprintf("%.3f", menz_coef_table$SE)
-menz_coef_table$t_value <- sprintf("%.2f", menz_coef_table$t_value)
+menz_coef_table$Estimate_fmt <- sprintf("%.3f", menz_coef_table$Estimate)
+menz_coef_table$SE_fmt <- sprintf("%.3f", menz_coef_table$SE)
+menz_coef_table$CI_fmt <- sprintf("[%.3f, %.3f]", menz_coef_table$CI_low, menz_coef_table$CI_high)
+menz_coef_table$t_value_fmt <- sprintf("%.2f", menz_coef_table$t_value)
 ```
 
-We assessed the overall relationship between number of submovements and submovement duration (beta = `r menz_slope`, SE = `r menz_slope_se`, p `r menz_slope_p`). 
+Adding bout length (number of submovements) as a predictor significantly improved model fit compared to the base model (χ² = `r anova_chisq`, df = `r anova_df`, p `r anova_p_fmt`; ΔAIC = `r delta_aic_base`).
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+model_comparison %>%
+  kable(format = "html",
+        caption = "Table: Model Comparison (Base vs. Menzerath)",
+        col.names = c("Comparison", "χ²", "df", "p", "AIC (base)", "AIC (model)", "ΔAIC"),
+        align = c("l", "r", "r", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE)
+```
 
+We assessed the overall relationship between number of submovements and submovement duration (β = `r menz_slope`, SE = `r menz_slope_se`, p `r menz_slope_p`). 
 ```{r, echo=FALSE, fig.height = 16, fig.width = 10, fig.cap="Figure. Scaling relationship according to the linear mixed regression model. (A) All corpora combined with overall regression line (black) and per-corpus lines. (B) Faceted view per corpus with overall line (dashed) for reference."}
 p_combined
 ```
-
-
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 menz_coef_table %>%
-  select(Parameter, Estimate, SE, t_value, p_formatted) %>%
+  select(Parameter, Estimate_fmt, SE_fmt, CI_fmt, t_value_fmt, p_formatted) %>%
   kable(format = "html", 
         caption = "Table: Fixed Effects for Basic Menzerath Model",
-        col.names = c("Parameter", "Estimate", "SE", "t-value", "p"),
-        align = c("l", "r", "r", "r", "r")) %>%
+        col.names = c("Parameter", "Estimate", "SE", "95% CI", "t-value", "p"),
+        align = c("l", "r", "r", "r", "r", "r")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
                 full_width = FALSE)
 ```
@@ -450,8 +497,6 @@ objman_coef_table %>%
                 full_width = FALSE)
 ```
 
-## Confound analysis: Object manipulation category
-
 ::: {.callout-note .callout-download collapse="true"}
 # Object manipulation per-corpus model fitting
 ```{r, warning=FALSE, message=FALSE}
@@ -481,5 +526,4 @@ corpus_table_objman %>%
                 full_width = FALSE) %>%
   footnote(general = "dAIC = AIC_loglog - AIC_linear; negative values indicate log-log model is better fit")
 ```
-
 
