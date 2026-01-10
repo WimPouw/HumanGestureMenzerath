@@ -590,61 +590,67 @@ Per-corpus model fitting
 <span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  n_gestures <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">unique</span>(corpus_data<span class="sc">$</span>gesture_id))</span>
 <span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  n_speakers <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">unique</span>(corpus_data<span class="sc">$</span>speaker))</span>
 <span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># log-log model</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  mod_log <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(<span class="fu">log</span>(subm_dur_ms)) <span class="sc">~</span> <span class="fu">scale</span>(<span class="fu">log</span>(n_submovements)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>speaker<span class="sc">/</span>gesture_id), </span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>                  <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="co"># linear model</span></span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  mod_lin <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(subm_dur_ms) <span class="sc">~</span> <span class="fu">scale</span>(n_submovements) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>speaker<span class="sc">/</span>gesture_id), </span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>                  <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="co"># extract stats</span></span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  sum_mod <span class="ot">&lt;-</span> <span class="fu">summary</span>(mod_log)</span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  coefs <span class="ot">&lt;-</span> <span class="fu">coef</span>(sum_mod)</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>  ci <span class="ot">&lt;-</span> <span class="fu">confint</span>(mod_log, <span class="at">parm =</span> <span class="st">"scale(log(n_submovements))"</span>, <span class="at">method =</span> <span class="st">"Wald"</span>)</span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># R2</span></span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  r2 <span class="ot">&lt;-</span> <span class="fu">r.squaredGLMM</span>(mod_log)</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># different model structure depending on number of speakers</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (n_speakers <span class="sc">&gt;</span> <span class="dv">1</span>) {</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    mod_log <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(<span class="fu">log</span>(subm_dur_ms)) <span class="sc">~</span> <span class="fu">scale</span>(<span class="fu">log</span>(n_submovements)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>speaker<span class="sc">/</span>gesture_id), </span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>                    <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    mod_lin <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(subm_dur_ms) <span class="sc">~</span> <span class="fu">scale</span>(n_submovements) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>speaker<span class="sc">/</span>gesture_id), </span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>                    <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    vc <span class="ot">&lt;-</span> <span class="fu">VarCorr</span>(mod_log)</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    speaker_sd <span class="ot">&lt;-</span> <span class="fu">attr</span>(vc<span class="sc">$</span>speaker, <span class="st">"stddev"</span>)[<span class="dv">1</span>]</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    mod_log <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(<span class="fu">log</span>(subm_dur_ms)) <span class="sc">~</span> <span class="fu">scale</span>(<span class="fu">log</span>(n_submovements)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>gesture_id), </span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>                    <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    mod_lin <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(subm_dur_ms) <span class="sc">~</span> <span class="fu">scale</span>(n_submovements) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>gesture_id), </span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>                    <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>    speaker_sd <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  }</span>
 <span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>  <span class="co"># speaker SD</span></span>
-<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>  vc <span class="ot">&lt;-</span> <span class="fu">VarCorr</span>(mod_log)</span>
-<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>  speaker_sd <span class="ot">&lt;-</span> <span class="fu">attr</span>(vc<span class="sc">$</span>speaker, <span class="st">"stddev"</span>)[<span class="dv">1</span>]</span>
-<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>  <span class="co"># AIC comparison</span></span>
-<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>  delta_aic <span class="ot">&lt;-</span> <span class="fu">AIC</span>(mod_log) <span class="sc">-</span> <span class="fu">AIC</span>(mod_lin)</span>
-<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
-<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">Corpus =</span> corpus_name,</span>
-<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">N_gestures =</span> n_gestures,</span>
-<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">N_speakers =</span> n_speakers,</span>
-<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">beta =</span> coefs[<span class="dv">2</span>, <span class="st">"Estimate"</span>],</span>
-<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>    <span class="at">SE =</span> coefs[<span class="dv">2</span>, <span class="st">"Std. Error"</span>],</span>
-<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">CI_low =</span> ci[<span class="dv">1</span>, <span class="dv">1</span>],</span>
-<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">CI_high =</span> ci[<span class="dv">1</span>, <span class="dv">2</span>],</span>
-<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a>    <span class="at">p =</span> coefs[<span class="dv">2</span>, <span class="st">"Pr(&gt;|t|)"</span>],</span>
-<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a>    <span class="at">Speaker_SD =</span> speaker_sd,</span>
-<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a>    <span class="at">R2_fixed =</span> r2[<span class="dv">1</span>, <span class="st">"R2m"</span>],</span>
-<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a>    <span class="at">R2_total =</span> r2[<span class="dv">1</span>, <span class="st">"R2c"</span>],</span>
-<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a>    <span class="at">delta_AIC =</span> delta_aic</span>
-<span id="cb7-48"><a href="#cb7-48" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb7-49"><a href="#cb7-49" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a><span class="co"># fit for gesture category - exclude ZHUBO (1 speaker)</span></span>
-<span id="cb7-52"><a href="#cb7-52" aria-hidden="true" tabindex="-1"></a>corpora_gesture <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"ECOLANG"</span>, <span class="st">"GESres"</span>, <span class="st">"MULTISIMO"</span>, <span class="st">"SAGA"</span>, <span class="st">"SAGAplus"</span>)</span>
-<span id="cb7-53"><a href="#cb7-53" aria-hidden="true" tabindex="-1"></a>corpus_results_gesture <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(corpora_gesture, <span class="cf">function</span>(c) <span class="fu">fit_corpus_model</span>(gesdat, c)))</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>  <span class="co"># extract stats</span></span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>  sum_mod <span class="ot">&lt;-</span> <span class="fu">summary</span>(mod_log)</span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>  coefs <span class="ot">&lt;-</span> <span class="fu">coef</span>(sum_mod)</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>  ci <span class="ot">&lt;-</span> <span class="fu">confint</span>(mod_log, <span class="at">parm =</span> <span class="st">"scale(log(n_submovements))"</span>, <span class="at">method =</span> <span class="st">"Wald"</span>)</span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>  <span class="co"># R2</span></span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>  r2 <span class="ot">&lt;-</span> <span class="fu">r.squaredGLMM</span>(mod_log)</span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>  <span class="co"># AIC comparison</span></span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>  delta_aic <span class="ot">&lt;-</span> <span class="fu">AIC</span>(mod_log) <span class="sc">-</span> <span class="fu">AIC</span>(mod_lin)</span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>    <span class="at">Corpus =</span> corpus_name,</span>
+<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">N_gestures =</span> n_gestures,</span>
+<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">N_speakers =</span> n_speakers,</span>
+<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a>    <span class="at">beta =</span> coefs[<span class="dv">2</span>, <span class="st">"Estimate"</span>],</span>
+<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a>    <span class="at">SE =</span> coefs[<span class="dv">2</span>, <span class="st">"Std. Error"</span>],</span>
+<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a>    <span class="at">CI_low =</span> ci[<span class="dv">1</span>, <span class="dv">1</span>],</span>
+<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a>    <span class="at">CI_high =</span> ci[<span class="dv">1</span>, <span class="dv">2</span>],</span>
+<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a>    <span class="at">p =</span> coefs[<span class="dv">2</span>, <span class="st">"Pr(&gt;|t|)"</span>],</span>
+<span id="cb7-48"><a href="#cb7-48" aria-hidden="true" tabindex="-1"></a>    <span class="at">Speaker_SD =</span> speaker_sd,</span>
+<span id="cb7-49"><a href="#cb7-49" aria-hidden="true" tabindex="-1"></a>    <span class="at">R2_fixed =</span> r2[<span class="dv">1</span>, <span class="st">"R2m"</span>],</span>
+<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a>    <span class="at">R2_total =</span> r2[<span class="dv">1</span>, <span class="st">"R2c"</span>],</span>
+<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a>    <span class="at">delta_AIC =</span> delta_aic</span>
+<span id="cb7-52"><a href="#cb7-52" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-53"><a href="#cb7-53" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb7-54"><a href="#cb7-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-55"><a href="#cb7-55" aria-hidden="true" tabindex="-1"></a><span class="co"># format table</span></span>
-<span id="cb7-56"><a href="#cb7-56" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture <span class="ot">&lt;-</span> corpus_results_gesture</span>
-<span id="cb7-57"><a href="#cb7-57" aria-hidden="true" tabindex="-1"></a><span class="co"># remove row  names</span></span>
-<span id="cb7-58"><a href="#cb7-58" aria-hidden="true" tabindex="-1"></a><span class="fu">row.names</span>(corpus_table_gesture) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
-<span id="cb7-59"><a href="#cb7-59" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>beta_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>beta)</span>
-<span id="cb7-60"><a href="#cb7-60" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>SE_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>SE)</span>
-<span id="cb7-61"><a href="#cb7-61" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>CI_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"[%.3f, %.3f]"</span>, corpus_table_gesture<span class="sc">$</span>CI_low, corpus_table_gesture<span class="sc">$</span>CI_high)</span>
-<span id="cb7-62"><a href="#cb7-62" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>p_fmt <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(corpus_table_gesture<span class="sc">$</span>p <span class="sc">&lt;</span> <span class="fl">0.001</span>, <span class="st">"&lt; 0.001"</span>, <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>p))</span>
-<span id="cb7-63"><a href="#cb7-63" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>Speaker_SD_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>Speaker_SD)</span>
-<span id="cb7-64"><a href="#cb7-64" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>R2_fixed_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>R2_fixed)</span>
-<span id="cb7-65"><a href="#cb7-65" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>R2_total_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>R2_total)</span>
-<span id="cb7-66"><a href="#cb7-66" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>delta_AIC_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.1f"</span>, corpus_table_gesture<span class="sc">$</span>delta_AIC)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-55"><a href="#cb7-55" aria-hidden="true" tabindex="-1"></a><span class="co"># fit for gesture category - now including ZHUBO</span></span>
+<span id="cb7-56"><a href="#cb7-56" aria-hidden="true" tabindex="-1"></a>corpora_gesture <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"ECOLANG"</span>, <span class="st">"GESres"</span>, <span class="st">"MULTISIMO"</span>, <span class="st">"SAGA"</span>, <span class="st">"SAGAplus"</span>, <span class="st">"ZHUBO"</span>)</span>
+<span id="cb7-57"><a href="#cb7-57" aria-hidden="true" tabindex="-1"></a>corpus_results_gesture <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(corpora_gesture, <span class="cf">function</span>(c) <span class="fu">fit_corpus_model</span>(gesdat, c)))</span>
+<span id="cb7-58"><a href="#cb7-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-59"><a href="#cb7-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-60"><a href="#cb7-60" aria-hidden="true" tabindex="-1"></a><span class="co"># format table</span></span>
+<span id="cb7-61"><a href="#cb7-61" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture <span class="ot">&lt;-</span> corpus_results_gesture</span>
+<span id="cb7-62"><a href="#cb7-62" aria-hidden="true" tabindex="-1"></a><span class="co"># remove row  names</span></span>
+<span id="cb7-63"><a href="#cb7-63" aria-hidden="true" tabindex="-1"></a><span class="fu">row.names</span>(corpus_table_gesture) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb7-64"><a href="#cb7-64" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>beta_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>beta)</span>
+<span id="cb7-65"><a href="#cb7-65" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>SE_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>SE)</span>
+<span id="cb7-66"><a href="#cb7-66" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>CI_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"[%.3f, %.3f]"</span>, corpus_table_gesture<span class="sc">$</span>CI_low, corpus_table_gesture<span class="sc">$</span>CI_high)</span>
+<span id="cb7-67"><a href="#cb7-67" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>p_fmt <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(corpus_table_gesture<span class="sc">$</span>p <span class="sc">&lt;</span> <span class="fl">0.001</span>, <span class="st">"&lt; 0.001"</span>, <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>p))</span>
+<span id="cb7-68"><a href="#cb7-68" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>Speaker_SD_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>Speaker_SD)</span>
+<span id="cb7-69"><a href="#cb7-69" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>R2_fixed_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>R2_fixed)</span>
+<span id="cb7-70"><a href="#cb7-70" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>R2_total_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>R2_total)</span>
+<span id="cb7-71"><a href="#cb7-71" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>delta_AIC_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.1f"</span>, corpus_table_gesture<span class="sc">$</span>delta_AIC)</span>
+<span id="cb7-72"><a href="#cb7-72" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>Speaker_SD_fmt <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="fu">is.na</span>(corpus_table_gesture<span class="sc">$</span>Speaker_SD), <span class="st">"—"</span>, <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>Speaker_SD))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </div>
@@ -734,6 +740,19 @@ Per-corpus model fitting
 <td style="text-align: right;">0.012</td>
 <td style="text-align: right;">0.068</td>
 <td style="text-align: right;">-4.2</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">ZHUBO</td>
+<td style="text-align: right;">86</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">-0.242</td>
+<td style="text-align: right;">0.055</td>
+<td style="text-align: right;">[-0.349, -0.134]</td>
+<td style="text-align: right;">&lt; 0.001</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">0.058</td>
+<td style="text-align: right;">0.071</td>
+<td style="text-align: right;">-9.0</td>
 </tr>
 </tbody><tfoot>
 <tr class="odd">
@@ -1727,212 +1746,218 @@ Wascher, Claudia A. F., and Mason Youngblood. 2025. <span>“Vocal Efficiency in
 <span id="cb10-276"><a href="#cb10-276" aria-hidden="true" tabindex="-1"></a>  n_gestures <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">unique</span>(corpus_data<span class="sc">$</span>gesture_id))</span>
 <span id="cb10-277"><a href="#cb10-277" aria-hidden="true" tabindex="-1"></a>  n_speakers <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">unique</span>(corpus_data<span class="sc">$</span>speaker))</span>
 <span id="cb10-278"><a href="#cb10-278" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-279"><a href="#cb10-279" aria-hidden="true" tabindex="-1"></a>  <span class="co"># log-log model</span></span>
-<span id="cb10-280"><a href="#cb10-280" aria-hidden="true" tabindex="-1"></a>  mod_log <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(<span class="fu">log</span>(subm_dur_ms)) <span class="sc">~</span> <span class="fu">scale</span>(<span class="fu">log</span>(n_submovements)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>speaker<span class="sc">/</span>gesture_id), </span>
-<span id="cb10-281"><a href="#cb10-281" aria-hidden="true" tabindex="-1"></a>                  <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb10-282"><a href="#cb10-282" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-283"><a href="#cb10-283" aria-hidden="true" tabindex="-1"></a>  <span class="co"># linear model</span></span>
-<span id="cb10-284"><a href="#cb10-284" aria-hidden="true" tabindex="-1"></a>  mod_lin <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(subm_dur_ms) <span class="sc">~</span> <span class="fu">scale</span>(n_submovements) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>speaker<span class="sc">/</span>gesture_id), </span>
-<span id="cb10-285"><a href="#cb10-285" aria-hidden="true" tabindex="-1"></a>                  <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb10-286"><a href="#cb10-286" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-287"><a href="#cb10-287" aria-hidden="true" tabindex="-1"></a>  <span class="co"># extract stats</span></span>
-<span id="cb10-288"><a href="#cb10-288" aria-hidden="true" tabindex="-1"></a>  sum_mod <span class="ot">&lt;-</span> <span class="fu">summary</span>(mod_log)</span>
-<span id="cb10-289"><a href="#cb10-289" aria-hidden="true" tabindex="-1"></a>  coefs <span class="ot">&lt;-</span> <span class="fu">coef</span>(sum_mod)</span>
-<span id="cb10-290"><a href="#cb10-290" aria-hidden="true" tabindex="-1"></a>  ci <span class="ot">&lt;-</span> <span class="fu">confint</span>(mod_log, <span class="at">parm =</span> <span class="st">"scale(log(n_submovements))"</span>, <span class="at">method =</span> <span class="st">"Wald"</span>)</span>
-<span id="cb10-291"><a href="#cb10-291" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-292"><a href="#cb10-292" aria-hidden="true" tabindex="-1"></a>  <span class="co"># R2</span></span>
-<span id="cb10-293"><a href="#cb10-293" aria-hidden="true" tabindex="-1"></a>  r2 <span class="ot">&lt;-</span> <span class="fu">r.squaredGLMM</span>(mod_log)</span>
+<span id="cb10-279"><a href="#cb10-279" aria-hidden="true" tabindex="-1"></a>  <span class="co"># different model structure depending on number of speakers</span></span>
+<span id="cb10-280"><a href="#cb10-280" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (n_speakers <span class="sc">&gt;</span> <span class="dv">1</span>) {</span>
+<span id="cb10-281"><a href="#cb10-281" aria-hidden="true" tabindex="-1"></a>    mod_log <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(<span class="fu">log</span>(subm_dur_ms)) <span class="sc">~</span> <span class="fu">scale</span>(<span class="fu">log</span>(n_submovements)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>speaker<span class="sc">/</span>gesture_id), </span>
+<span id="cb10-282"><a href="#cb10-282" aria-hidden="true" tabindex="-1"></a>                    <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-283"><a href="#cb10-283" aria-hidden="true" tabindex="-1"></a>    mod_lin <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(subm_dur_ms) <span class="sc">~</span> <span class="fu">scale</span>(n_submovements) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>speaker<span class="sc">/</span>gesture_id), </span>
+<span id="cb10-284"><a href="#cb10-284" aria-hidden="true" tabindex="-1"></a>                    <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-285"><a href="#cb10-285" aria-hidden="true" tabindex="-1"></a>    vc <span class="ot">&lt;-</span> <span class="fu">VarCorr</span>(mod_log)</span>
+<span id="cb10-286"><a href="#cb10-286" aria-hidden="true" tabindex="-1"></a>    speaker_sd <span class="ot">&lt;-</span> <span class="fu">attr</span>(vc<span class="sc">$</span>speaker, <span class="st">"stddev"</span>)[<span class="dv">1</span>]</span>
+<span id="cb10-287"><a href="#cb10-287" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb10-288"><a href="#cb10-288" aria-hidden="true" tabindex="-1"></a>    mod_log <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(<span class="fu">log</span>(subm_dur_ms)) <span class="sc">~</span> <span class="fu">scale</span>(<span class="fu">log</span>(n_submovements)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>gesture_id), </span>
+<span id="cb10-289"><a href="#cb10-289" aria-hidden="true" tabindex="-1"></a>                    <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-290"><a href="#cb10-290" aria-hidden="true" tabindex="-1"></a>    mod_lin <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(subm_dur_ms) <span class="sc">~</span> <span class="fu">scale</span>(n_submovements) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>gesture_id), </span>
+<span id="cb10-291"><a href="#cb10-291" aria-hidden="true" tabindex="-1"></a>                    <span class="at">data =</span> corpus_data, <span class="at">REML =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-292"><a href="#cb10-292" aria-hidden="true" tabindex="-1"></a>    speaker_sd <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb10-293"><a href="#cb10-293" aria-hidden="true" tabindex="-1"></a>  }</span>
 <span id="cb10-294"><a href="#cb10-294" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-295"><a href="#cb10-295" aria-hidden="true" tabindex="-1"></a>  <span class="co"># speaker SD</span></span>
-<span id="cb10-296"><a href="#cb10-296" aria-hidden="true" tabindex="-1"></a>  vc <span class="ot">&lt;-</span> <span class="fu">VarCorr</span>(mod_log)</span>
-<span id="cb10-297"><a href="#cb10-297" aria-hidden="true" tabindex="-1"></a>  speaker_sd <span class="ot">&lt;-</span> <span class="fu">attr</span>(vc<span class="sc">$</span>speaker, <span class="st">"stddev"</span>)[<span class="dv">1</span>]</span>
-<span id="cb10-298"><a href="#cb10-298" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-299"><a href="#cb10-299" aria-hidden="true" tabindex="-1"></a>  <span class="co"># AIC comparison</span></span>
-<span id="cb10-300"><a href="#cb10-300" aria-hidden="true" tabindex="-1"></a>  delta_aic <span class="ot">&lt;-</span> <span class="fu">AIC</span>(mod_log) <span class="sc">-</span> <span class="fu">AIC</span>(mod_lin)</span>
-<span id="cb10-301"><a href="#cb10-301" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-302"><a href="#cb10-302" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
-<span id="cb10-303"><a href="#cb10-303" aria-hidden="true" tabindex="-1"></a>    <span class="at">Corpus =</span> corpus_name,</span>
-<span id="cb10-304"><a href="#cb10-304" aria-hidden="true" tabindex="-1"></a>    <span class="at">N_gestures =</span> n_gestures,</span>
-<span id="cb10-305"><a href="#cb10-305" aria-hidden="true" tabindex="-1"></a>    <span class="at">N_speakers =</span> n_speakers,</span>
-<span id="cb10-306"><a href="#cb10-306" aria-hidden="true" tabindex="-1"></a>    <span class="at">beta =</span> coefs[<span class="dv">2</span>, <span class="st">"Estimate"</span>],</span>
-<span id="cb10-307"><a href="#cb10-307" aria-hidden="true" tabindex="-1"></a>    <span class="at">SE =</span> coefs[<span class="dv">2</span>, <span class="st">"Std. Error"</span>],</span>
-<span id="cb10-308"><a href="#cb10-308" aria-hidden="true" tabindex="-1"></a>    <span class="at">CI_low =</span> ci[<span class="dv">1</span>, <span class="dv">1</span>],</span>
-<span id="cb10-309"><a href="#cb10-309" aria-hidden="true" tabindex="-1"></a>    <span class="at">CI_high =</span> ci[<span class="dv">1</span>, <span class="dv">2</span>],</span>
-<span id="cb10-310"><a href="#cb10-310" aria-hidden="true" tabindex="-1"></a>    <span class="at">p =</span> coefs[<span class="dv">2</span>, <span class="st">"Pr(&gt;|t|)"</span>],</span>
-<span id="cb10-311"><a href="#cb10-311" aria-hidden="true" tabindex="-1"></a>    <span class="at">Speaker_SD =</span> speaker_sd,</span>
-<span id="cb10-312"><a href="#cb10-312" aria-hidden="true" tabindex="-1"></a>    <span class="at">R2_fixed =</span> r2[<span class="dv">1</span>, <span class="st">"R2m"</span>],</span>
-<span id="cb10-313"><a href="#cb10-313" aria-hidden="true" tabindex="-1"></a>    <span class="at">R2_total =</span> r2[<span class="dv">1</span>, <span class="st">"R2c"</span>],</span>
-<span id="cb10-314"><a href="#cb10-314" aria-hidden="true" tabindex="-1"></a>    <span class="at">delta_AIC =</span> delta_aic</span>
-<span id="cb10-315"><a href="#cb10-315" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb10-316"><a href="#cb10-316" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb10-317"><a href="#cb10-317" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-318"><a href="#cb10-318" aria-hidden="true" tabindex="-1"></a><span class="co"># fit for gesture category - exclude ZHUBO (1 speaker)</span></span>
-<span id="cb10-319"><a href="#cb10-319" aria-hidden="true" tabindex="-1"></a>corpora_gesture <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"ECOLANG"</span>, <span class="st">"GESres"</span>, <span class="st">"MULTISIMO"</span>, <span class="st">"SAGA"</span>, <span class="st">"SAGAplus"</span>)</span>
-<span id="cb10-320"><a href="#cb10-320" aria-hidden="true" tabindex="-1"></a>corpus_results_gesture <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(corpora_gesture, <span class="cf">function</span>(c) <span class="fu">fit_corpus_model</span>(gesdat, c)))</span>
+<span id="cb10-295"><a href="#cb10-295" aria-hidden="true" tabindex="-1"></a>  <span class="co"># extract stats</span></span>
+<span id="cb10-296"><a href="#cb10-296" aria-hidden="true" tabindex="-1"></a>  sum_mod <span class="ot">&lt;-</span> <span class="fu">summary</span>(mod_log)</span>
+<span id="cb10-297"><a href="#cb10-297" aria-hidden="true" tabindex="-1"></a>  coefs <span class="ot">&lt;-</span> <span class="fu">coef</span>(sum_mod)</span>
+<span id="cb10-298"><a href="#cb10-298" aria-hidden="true" tabindex="-1"></a>  ci <span class="ot">&lt;-</span> <span class="fu">confint</span>(mod_log, <span class="at">parm =</span> <span class="st">"scale(log(n_submovements))"</span>, <span class="at">method =</span> <span class="st">"Wald"</span>)</span>
+<span id="cb10-299"><a href="#cb10-299" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb10-300"><a href="#cb10-300" aria-hidden="true" tabindex="-1"></a>  <span class="co"># R2</span></span>
+<span id="cb10-301"><a href="#cb10-301" aria-hidden="true" tabindex="-1"></a>  r2 <span class="ot">&lt;-</span> <span class="fu">r.squaredGLMM</span>(mod_log)</span>
+<span id="cb10-302"><a href="#cb10-302" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb10-303"><a href="#cb10-303" aria-hidden="true" tabindex="-1"></a>  <span class="co"># AIC comparison</span></span>
+<span id="cb10-304"><a href="#cb10-304" aria-hidden="true" tabindex="-1"></a>  delta_aic <span class="ot">&lt;-</span> <span class="fu">AIC</span>(mod_log) <span class="sc">-</span> <span class="fu">AIC</span>(mod_lin)</span>
+<span id="cb10-305"><a href="#cb10-305" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb10-306"><a href="#cb10-306" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb10-307"><a href="#cb10-307" aria-hidden="true" tabindex="-1"></a>    <span class="at">Corpus =</span> corpus_name,</span>
+<span id="cb10-308"><a href="#cb10-308" aria-hidden="true" tabindex="-1"></a>    <span class="at">N_gestures =</span> n_gestures,</span>
+<span id="cb10-309"><a href="#cb10-309" aria-hidden="true" tabindex="-1"></a>    <span class="at">N_speakers =</span> n_speakers,</span>
+<span id="cb10-310"><a href="#cb10-310" aria-hidden="true" tabindex="-1"></a>    <span class="at">beta =</span> coefs[<span class="dv">2</span>, <span class="st">"Estimate"</span>],</span>
+<span id="cb10-311"><a href="#cb10-311" aria-hidden="true" tabindex="-1"></a>    <span class="at">SE =</span> coefs[<span class="dv">2</span>, <span class="st">"Std. Error"</span>],</span>
+<span id="cb10-312"><a href="#cb10-312" aria-hidden="true" tabindex="-1"></a>    <span class="at">CI_low =</span> ci[<span class="dv">1</span>, <span class="dv">1</span>],</span>
+<span id="cb10-313"><a href="#cb10-313" aria-hidden="true" tabindex="-1"></a>    <span class="at">CI_high =</span> ci[<span class="dv">1</span>, <span class="dv">2</span>],</span>
+<span id="cb10-314"><a href="#cb10-314" aria-hidden="true" tabindex="-1"></a>    <span class="at">p =</span> coefs[<span class="dv">2</span>, <span class="st">"Pr(&gt;|t|)"</span>],</span>
+<span id="cb10-315"><a href="#cb10-315" aria-hidden="true" tabindex="-1"></a>    <span class="at">Speaker_SD =</span> speaker_sd,</span>
+<span id="cb10-316"><a href="#cb10-316" aria-hidden="true" tabindex="-1"></a>    <span class="at">R2_fixed =</span> r2[<span class="dv">1</span>, <span class="st">"R2m"</span>],</span>
+<span id="cb10-317"><a href="#cb10-317" aria-hidden="true" tabindex="-1"></a>    <span class="at">R2_total =</span> r2[<span class="dv">1</span>, <span class="st">"R2c"</span>],</span>
+<span id="cb10-318"><a href="#cb10-318" aria-hidden="true" tabindex="-1"></a>    <span class="at">delta_AIC =</span> delta_aic</span>
+<span id="cb10-319"><a href="#cb10-319" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb10-320"><a href="#cb10-320" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb10-321"><a href="#cb10-321" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-322"><a href="#cb10-322" aria-hidden="true" tabindex="-1"></a><span class="co"># format table</span></span>
-<span id="cb10-323"><a href="#cb10-323" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture <span class="ot">&lt;-</span> corpus_results_gesture</span>
-<span id="cb10-324"><a href="#cb10-324" aria-hidden="true" tabindex="-1"></a><span class="co"># remove row  names</span></span>
-<span id="cb10-325"><a href="#cb10-325" aria-hidden="true" tabindex="-1"></a><span class="fu">row.names</span>(corpus_table_gesture) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
-<span id="cb10-326"><a href="#cb10-326" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>beta_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>beta)</span>
-<span id="cb10-327"><a href="#cb10-327" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>SE_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>SE)</span>
-<span id="cb10-328"><a href="#cb10-328" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>CI_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"[%.3f, %.3f]"</span>, corpus_table_gesture<span class="sc">$</span>CI_low, corpus_table_gesture<span class="sc">$</span>CI_high)</span>
-<span id="cb10-329"><a href="#cb10-329" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>p_fmt <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(corpus_table_gesture<span class="sc">$</span>p <span class="sc">&lt;</span> <span class="fl">0.001</span>, <span class="st">"&lt; 0.001"</span>, <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>p))</span>
-<span id="cb10-330"><a href="#cb10-330" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>Speaker_SD_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>Speaker_SD)</span>
-<span id="cb10-331"><a href="#cb10-331" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>R2_fixed_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>R2_fixed)</span>
-<span id="cb10-332"><a href="#cb10-332" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>R2_total_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>R2_total)</span>
-<span id="cb10-333"><a href="#cb10-333" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>delta_AIC_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.1f"</span>, corpus_table_gesture<span class="sc">$</span>delta_AIC)</span>
-<span id="cb10-334"><a href="#cb10-334" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb10-335"><a href="#cb10-335" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb10-336"><a href="#cb10-336" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-337"><a href="#cb10-337" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, echo=FALSE, message=FALSE, warning=FALSE}</span></span>
-<span id="cb10-338"><a href="#cb10-338" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture <span class="sc">%&gt;%</span></span>
-<span id="cb10-339"><a href="#cb10-339" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Corpus, N_gestures, N_speakers, beta_fmt, SE_fmt, CI_fmt, p_fmt, Speaker_SD_fmt, R2_fixed_fmt, R2_total_fmt, delta_AIC_fmt) <span class="sc">%&gt;%</span></span>
-<span id="cb10-340"><a href="#cb10-340" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">format =</span> <span class="st">"html"</span>,</span>
-<span id="cb10-341"><a href="#cb10-341" aria-hidden="true" tabindex="-1"></a>        <span class="at">caption =</span> <span class="st">"Table: Per-corpus Menzerath effects for gesture category"</span>,</span>
-<span id="cb10-342"><a href="#cb10-342" aria-hidden="true" tabindex="-1"></a>        <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Corpus"</span>, <span class="st">"N gestures"</span>, <span class="st">"N speakers"</span>, <span class="st">"beta"</span>, <span class="st">"SE"</span>, <span class="st">"95% CI"</span>, <span class="st">"p"</span>, <span class="st">"Speaker SD"</span>, <span class="st">"R2_fixed"</span>, <span class="st">"R2_total"</span>, <span class="st">"dAIC"</span>),</span>
-<span id="cb10-343"><a href="#cb10-343" aria-hidden="true" tabindex="-1"></a>        <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb10-344"><a href="#cb10-344" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"striped"</span>, <span class="st">"hover"</span>, <span class="st">"condensed"</span>),</span>
-<span id="cb10-345"><a href="#cb10-345" aria-hidden="true" tabindex="-1"></a>                <span class="at">full_width =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb10-346"><a href="#cb10-346" aria-hidden="true" tabindex="-1"></a>  <span class="fu">footnote</span>(<span class="at">general =</span> <span class="st">"dAIC = AIC_loglog - AIC_linear; negative values indicate log-log model is better fit"</span>)</span>
-<span id="cb10-347"><a href="#cb10-347" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb10-348"><a href="#cb10-348" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-349"><a href="#cb10-349" aria-hidden="true" tabindex="-1"></a><span class="fu"># Confound Analysis: Object Manipulation</span></span>
-<span id="cb10-350"><a href="#cb10-350" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-351"><a href="#cb10-351" aria-hidden="true" tabindex="-1"></a>To assess whether the Menzerath-Altman relationship is specific to communicative gestures, we repeat the analysis for object manipulation movements which were also annotated in the ECOLANG corpus. We should expect here that these movements follow communicative efficiency principles less (but they might be regulated by general efficiency principles).</span>
-<span id="cb10-352"><a href="#cb10-352" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-353"><a href="#cb10-353" aria-hidden="true" tabindex="-1"></a>::: {.callout-note .callout-download collapse="true"}</span>
-<span id="cb10-354"><a href="#cb10-354" aria-hidden="true" tabindex="-1"></a><span class="fu"># Object manipulation analysis</span></span>
-<span id="cb10-355"><a href="#cb10-355" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, warning=FALSE, message=FALSE}</span></span>
-<span id="cb10-356"><a href="#cb10-356" aria-hidden="true" tabindex="-1"></a><span class="co"># filter for n_submovements &gt; 1</span></span>
-<span id="cb10-357"><a href="#cb10-357" aria-hidden="true" tabindex="-1"></a>objman_dat <span class="ot">&lt;-</span> objman_dat[objman_dat<span class="sc">$</span>n_submovements <span class="sc">&gt;</span> <span class="dv">1</span>, ]</span>
+<span id="cb10-322"><a href="#cb10-322" aria-hidden="true" tabindex="-1"></a><span class="co"># fit for gesture category - now including ZHUBO</span></span>
+<span id="cb10-323"><a href="#cb10-323" aria-hidden="true" tabindex="-1"></a>corpora_gesture <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"ECOLANG"</span>, <span class="st">"GESres"</span>, <span class="st">"MULTISIMO"</span>, <span class="st">"SAGA"</span>, <span class="st">"SAGAplus"</span>, <span class="st">"ZHUBO"</span>)</span>
+<span id="cb10-324"><a href="#cb10-324" aria-hidden="true" tabindex="-1"></a>corpus_results_gesture <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, <span class="fu">lapply</span>(corpora_gesture, <span class="cf">function</span>(c) <span class="fu">fit_corpus_model</span>(gesdat, c)))</span>
+<span id="cb10-325"><a href="#cb10-325" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-326"><a href="#cb10-326" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-327"><a href="#cb10-327" aria-hidden="true" tabindex="-1"></a><span class="co"># format table</span></span>
+<span id="cb10-328"><a href="#cb10-328" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture <span class="ot">&lt;-</span> corpus_results_gesture</span>
+<span id="cb10-329"><a href="#cb10-329" aria-hidden="true" tabindex="-1"></a><span class="co"># remove row  names</span></span>
+<span id="cb10-330"><a href="#cb10-330" aria-hidden="true" tabindex="-1"></a><span class="fu">row.names</span>(corpus_table_gesture) <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb10-331"><a href="#cb10-331" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>beta_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>beta)</span>
+<span id="cb10-332"><a href="#cb10-332" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>SE_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>SE)</span>
+<span id="cb10-333"><a href="#cb10-333" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>CI_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"[%.3f, %.3f]"</span>, corpus_table_gesture<span class="sc">$</span>CI_low, corpus_table_gesture<span class="sc">$</span>CI_high)</span>
+<span id="cb10-334"><a href="#cb10-334" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>p_fmt <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(corpus_table_gesture<span class="sc">$</span>p <span class="sc">&lt;</span> <span class="fl">0.001</span>, <span class="st">"&lt; 0.001"</span>, <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>p))</span>
+<span id="cb10-335"><a href="#cb10-335" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>Speaker_SD_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>Speaker_SD)</span>
+<span id="cb10-336"><a href="#cb10-336" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>R2_fixed_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>R2_fixed)</span>
+<span id="cb10-337"><a href="#cb10-337" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>R2_total_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>R2_total)</span>
+<span id="cb10-338"><a href="#cb10-338" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>delta_AIC_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.1f"</span>, corpus_table_gesture<span class="sc">$</span>delta_AIC)</span>
+<span id="cb10-339"><a href="#cb10-339" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture<span class="sc">$</span>Speaker_SD_fmt <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="fu">is.na</span>(corpus_table_gesture<span class="sc">$</span>Speaker_SD), <span class="st">"—"</span>, <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_gesture<span class="sc">$</span>Speaker_SD))</span>
+<span id="cb10-340"><a href="#cb10-340" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-341"><a href="#cb10-341" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb10-342"><a href="#cb10-342" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-343"><a href="#cb10-343" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, echo=FALSE, message=FALSE, warning=FALSE}</span></span>
+<span id="cb10-344"><a href="#cb10-344" aria-hidden="true" tabindex="-1"></a>corpus_table_gesture <span class="sc">%&gt;%</span></span>
+<span id="cb10-345"><a href="#cb10-345" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Corpus, N_gestures, N_speakers, beta_fmt, SE_fmt, CI_fmt, p_fmt, Speaker_SD_fmt, R2_fixed_fmt, R2_total_fmt, delta_AIC_fmt) <span class="sc">%&gt;%</span></span>
+<span id="cb10-346"><a href="#cb10-346" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">format =</span> <span class="st">"html"</span>,</span>
+<span id="cb10-347"><a href="#cb10-347" aria-hidden="true" tabindex="-1"></a>        <span class="at">caption =</span> <span class="st">"Table: Per-corpus Menzerath effects for gesture category"</span>,</span>
+<span id="cb10-348"><a href="#cb10-348" aria-hidden="true" tabindex="-1"></a>        <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Corpus"</span>, <span class="st">"N gestures"</span>, <span class="st">"N speakers"</span>, <span class="st">"beta"</span>, <span class="st">"SE"</span>, <span class="st">"95% CI"</span>, <span class="st">"p"</span>, <span class="st">"Speaker SD"</span>, <span class="st">"R2_fixed"</span>, <span class="st">"R2_total"</span>, <span class="st">"dAIC"</span>),</span>
+<span id="cb10-349"><a href="#cb10-349" aria-hidden="true" tabindex="-1"></a>        <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb10-350"><a href="#cb10-350" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"striped"</span>, <span class="st">"hover"</span>, <span class="st">"condensed"</span>),</span>
+<span id="cb10-351"><a href="#cb10-351" aria-hidden="true" tabindex="-1"></a>                <span class="at">full_width =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb10-352"><a href="#cb10-352" aria-hidden="true" tabindex="-1"></a>  <span class="fu">footnote</span>(<span class="at">general =</span> <span class="st">"dAIC = AIC_loglog - AIC_linear; negative values indicate log-log model is better fit"</span>)</span>
+<span id="cb10-353"><a href="#cb10-353" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-354"><a href="#cb10-354" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-355"><a href="#cb10-355" aria-hidden="true" tabindex="-1"></a><span class="fu"># Confound Analysis: Object Manipulation</span></span>
+<span id="cb10-356"><a href="#cb10-356" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-357"><a href="#cb10-357" aria-hidden="true" tabindex="-1"></a>To assess whether the Menzerath-Altman relationship is specific to communicative gestures, we repeat the analysis for object manipulation movements which were also annotated in the ECOLANG corpus. We should expect here that these movements follow communicative efficiency principles less (but they might be regulated by general efficiency principles).</span>
 <span id="cb10-358"><a href="#cb10-358" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-359"><a href="#cb10-359" aria-hidden="true" tabindex="-1"></a><span class="co"># model for objman - only ECOLANG has data, so no corpus random effect</span></span>
-<span id="cb10-360"><a href="#cb10-360" aria-hidden="true" tabindex="-1"></a>objman_menz_model <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(<span class="fu">log</span>(subm_dur_ms)) <span class="sc">~</span> <span class="fu">scale</span>(<span class="fu">log</span>(n_submovements)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>speaker<span class="sc">/</span>gesture_id), <span class="at">data =</span> objman_dat)</span>
-<span id="cb10-361"><a href="#cb10-361" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-362"><a href="#cb10-362" aria-hidden="true" tabindex="-1"></a><span class="co"># coefficients</span></span>
-<span id="cb10-363"><a href="#cb10-363" aria-hidden="true" tabindex="-1"></a>coef_objman <span class="ot">&lt;-</span> <span class="fu">fixef</span>(objman_menz_model)</span>
-<span id="cb10-364"><a href="#cb10-364" aria-hidden="true" tabindex="-1"></a>sum_objman <span class="ot">&lt;-</span> <span class="fu">coef</span>(<span class="fu">summary</span>(objman_menz_model))</span>
-<span id="cb10-365"><a href="#cb10-365" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-366"><a href="#cb10-366" aria-hidden="true" tabindex="-1"></a><span class="co"># summary data</span></span>
-<span id="cb10-367"><a href="#cb10-367" aria-hidden="true" tabindex="-1"></a>objman_summary <span class="ot">&lt;-</span> objman_dat <span class="sc">%&gt;%</span></span>
-<span id="cb10-368"><a href="#cb10-368" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(gesture_id, n_submovements, corpus) <span class="sc">%&gt;%</span></span>
-<span id="cb10-369"><a href="#cb10-369" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">subm_dur_median =</span> <span class="fu">median</span>(subm_dur_ms), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
-<span id="cb10-370"><a href="#cb10-370" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-371"><a href="#cb10-371" aria-hidden="true" tabindex="-1"></a>objman_summary<span class="sc">$</span>x_scaled <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(<span class="fu">log</span>(objman_summary<span class="sc">$</span>n_submovements)))</span>
-<span id="cb10-372"><a href="#cb10-372" aria-hidden="true" tabindex="-1"></a>objman_summary<span class="sc">$</span>y_scaled <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(<span class="fu">log</span>(objman_summary<span class="sc">$</span>subm_dur_median)))</span>
-<span id="cb10-373"><a href="#cb10-373" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-374"><a href="#cb10-374" aria-hidden="true" tabindex="-1"></a><span class="co"># prediction line</span></span>
-<span id="cb10-375"><a href="#cb10-375" aria-hidden="true" tabindex="-1"></a>pred_x_obj <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fu">min</span>(objman_summary<span class="sc">$</span>x_scaled), <span class="fu">max</span>(objman_summary<span class="sc">$</span>x_scaled), <span class="at">length.out =</span> <span class="dv">100</span>)</span>
-<span id="cb10-376"><a href="#cb10-376" aria-hidden="true" tabindex="-1"></a>pred_y_obj <span class="ot">&lt;-</span> coef_objman[<span class="dv">1</span>] <span class="sc">+</span> coef_objman[<span class="dv">2</span>] <span class="sc">*</span> pred_x_obj</span>
-<span id="cb10-377"><a href="#cb10-377" aria-hidden="true" tabindex="-1"></a>pred_line_obj <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> pred_x_obj, <span class="at">y =</span> pred_y_obj)</span>
-<span id="cb10-378"><a href="#cb10-378" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-379"><a href="#cb10-379" aria-hidden="true" tabindex="-1"></a><span class="co"># per-corpus lines for objman (only ECOLANG)</span></span>
-<span id="cb10-380"><a href="#cb10-380" aria-hidden="true" tabindex="-1"></a>corpus_lines_obj <span class="ot">&lt;-</span> objman_summary <span class="sc">%&gt;%</span></span>
-<span id="cb10-381"><a href="#cb10-381" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(corpus) <span class="sc">%&gt;%</span></span>
-<span id="cb10-382"><a href="#cb10-382" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb10-383"><a href="#cb10-383" aria-hidden="true" tabindex="-1"></a>    <span class="at">intercept =</span> <span class="fu">coef</span>(<span class="fu">lm</span>(y_scaled <span class="sc">~</span> x_scaled))[<span class="dv">1</span>],</span>
-<span id="cb10-384"><a href="#cb10-384" aria-hidden="true" tabindex="-1"></a>    <span class="at">slope =</span> <span class="fu">coef</span>(<span class="fu">lm</span>(y_scaled <span class="sc">~</span> x_scaled))[<span class="dv">2</span>],</span>
-<span id="cb10-385"><a href="#cb10-385" aria-hidden="true" tabindex="-1"></a>    <span class="at">x_min =</span> <span class="fu">min</span>(x_scaled),</span>
-<span id="cb10-386"><a href="#cb10-386" aria-hidden="true" tabindex="-1"></a>    <span class="at">x_max =</span> <span class="fu">max</span>(x_scaled),</span>
-<span id="cb10-387"><a href="#cb10-387" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
-<span id="cb10-388"><a href="#cb10-388" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb10-389"><a href="#cb10-389" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowwise</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb10-390"><a href="#cb10-390" aria-hidden="true" tabindex="-1"></a>  <span class="fu">do</span>({</span>
-<span id="cb10-391"><a href="#cb10-391" aria-hidden="true" tabindex="-1"></a>    x_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(.<span class="sc">$</span>x_min, .<span class="sc">$</span>x_max, <span class="at">length.out =</span> <span class="dv">50</span>)</span>
-<span id="cb10-392"><a href="#cb10-392" aria-hidden="true" tabindex="-1"></a>    <span class="fu">data.frame</span>(<span class="at">corpus =</span> .<span class="sc">$</span>corpus, <span class="at">x =</span> x_seq, <span class="at">y =</span> .<span class="sc">$</span>intercept <span class="sc">+</span> .<span class="sc">$</span>slope <span class="sc">*</span> x_seq)</span>
-<span id="cb10-393"><a href="#cb10-393" aria-hidden="true" tabindex="-1"></a>  })</span>
-<span id="cb10-394"><a href="#cb10-394" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-395"><a href="#cb10-395" aria-hidden="true" tabindex="-1"></a><span class="co"># plot</span></span>
-<span id="cb10-396"><a href="#cb10-396" aria-hidden="true" tabindex="-1"></a>p_objman <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(objman_summary, <span class="fu">aes</span>(<span class="at">x =</span> x_scaled, <span class="at">y =</span> y_scaled, <span class="at">color =</span> corpus)) <span class="sc">+</span></span>
-<span id="cb10-397"><a href="#cb10-397" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
-<span id="cb10-398"><a href="#cb10-398" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> corpus_lines_obj, <span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y, <span class="at">color =</span> corpus), <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
-<span id="cb10-399"><a href="#cb10-399" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> pred_line_obj, <span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y), <span class="at">color =</span> <span class="st">"black"</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
-<span id="cb10-400"><a href="#cb10-400" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, </span>
-<span id="cb10-401"><a href="#cb10-401" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="fu">sprintf</span>(<span class="st">"overall: y = %.3f + %.3fx"</span>, coef_objman[<span class="dv">1</span>], coef_objman[<span class="dv">2</span>]),</span>
-<span id="cb10-402"><a href="#cb10-402" aria-hidden="true" tabindex="-1"></a>           <span class="at">hjust =</span> <span class="fl">1.1</span>, <span class="at">vjust =</span> <span class="fl">1.5</span>, <span class="at">size =</span> <span class="fl">2.5</span>) <span class="sc">+</span></span>
-<span id="cb10-403"><a href="#cb10-403" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Scaled log(Number of Submovements)"</span>, </span>
-<span id="cb10-404"><a href="#cb10-404" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Scaled log(Submovement Duration)"</span>,</span>
-<span id="cb10-405"><a href="#cb10-405" aria-hidden="true" tabindex="-1"></a>       <span class="at">title =</span> <span class="st">"Menzerath's Law: Object Manipulation"</span>) <span class="sc">+</span></span>
-<span id="cb10-406"><a href="#cb10-406" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> corpus_colors) <span class="sc">+</span></span>
-<span id="cb10-407"><a href="#cb10-407" aria-hidden="true" tabindex="-1"></a>  <span class="fu">my_theme</span>()</span>
-<span id="cb10-408"><a href="#cb10-408" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-409"><a href="#cb10-409" aria-hidden="true" tabindex="-1"></a><span class="co"># save</span></span>
-<span id="cb10-410"><a href="#cb10-410" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="fu">paste0</span>(current_dir, <span class="st">"/plots/menzerath_objman.svg"</span>), p_objman, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
-<span id="cb10-411"><a href="#cb10-411" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb10-412"><a href="#cb10-412" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb10-413"><a href="#cb10-413" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-414"><a href="#cb10-414" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, echo=FALSE, message=FALSE, warning=FALSE}</span></span>
-<span id="cb10-415"><a href="#cb10-415" aria-hidden="true" tabindex="-1"></a><span class="co"># reporting values</span></span>
-<span id="cb10-416"><a href="#cb10-416" aria-hidden="true" tabindex="-1"></a>objman_slope <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, sum_objman[<span class="dv">2</span>, <span class="st">"Estimate"</span>])</span>
-<span id="cb10-417"><a href="#cb10-417" aria-hidden="true" tabindex="-1"></a>objman_slope_se <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, sum_objman[<span class="dv">2</span>, <span class="st">"Std. Error"</span>])</span>
-<span id="cb10-418"><a href="#cb10-418" aria-hidden="true" tabindex="-1"></a>objman_slope_p <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(sum_objman[<span class="dv">2</span>, <span class="st">"Pr(&gt;|t|)"</span>] <span class="sc">&lt;</span> <span class="fl">0.001</span>, <span class="st">"&lt; 0.001"</span>, </span>
-<span id="cb10-419"><a href="#cb10-419" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">sprintf</span>(<span class="st">"= %.3f"</span>, sum_objman[<span class="dv">2</span>, <span class="st">"Pr(&gt;|t|)"</span>]))</span>
-<span id="cb10-420"><a href="#cb10-420" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-421"><a href="#cb10-421" aria-hidden="true" tabindex="-1"></a>objman_coef_table <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb10-422"><a href="#cb10-422" aria-hidden="true" tabindex="-1"></a>  <span class="at">Parameter =</span> <span class="fu">c</span>(<span class="st">"Intercept"</span>, <span class="st">"log(Number of Submovements)"</span>),</span>
-<span id="cb10-423"><a href="#cb10-423" aria-hidden="true" tabindex="-1"></a>  <span class="at">Estimate =</span> <span class="fu">c</span>(sum_objman[<span class="dv">1</span>, <span class="st">"Estimate"</span>], sum_objman[<span class="dv">2</span>, <span class="st">"Estimate"</span>]),</span>
-<span id="cb10-424"><a href="#cb10-424" aria-hidden="true" tabindex="-1"></a>  <span class="at">SE =</span> <span class="fu">c</span>(sum_objman[<span class="dv">1</span>, <span class="st">"Std. Error"</span>], sum_objman[<span class="dv">2</span>, <span class="st">"Std. Error"</span>]),</span>
-<span id="cb10-425"><a href="#cb10-425" aria-hidden="true" tabindex="-1"></a>  <span class="at">t_value =</span> <span class="fu">c</span>(sum_objman[<span class="dv">1</span>, <span class="st">"t value"</span>], sum_objman[<span class="dv">2</span>, <span class="st">"t value"</span>]),</span>
-<span id="cb10-426"><a href="#cb10-426" aria-hidden="true" tabindex="-1"></a>  <span class="at">p_value =</span> <span class="fu">c</span>(sum_objman[<span class="dv">1</span>, <span class="st">"Pr(&gt;|t|)"</span>], sum_objman[<span class="dv">2</span>, <span class="st">"Pr(&gt;|t|)"</span>])</span>
-<span id="cb10-427"><a href="#cb10-427" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb10-428"><a href="#cb10-428" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-429"><a href="#cb10-429" aria-hidden="true" tabindex="-1"></a>objman_coef_table<span class="sc">$</span>p_formatted <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(objman_coef_table<span class="sc">$</span>p_value <span class="sc">&lt;</span> <span class="fl">0.001</span>, <span class="st">"&lt; 0.001"</span>,</span>
-<span id="cb10-430"><a href="#cb10-430" aria-hidden="true" tabindex="-1"></a>                                        <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, objman_coef_table<span class="sc">$</span>p_value))</span>
-<span id="cb10-431"><a href="#cb10-431" aria-hidden="true" tabindex="-1"></a>objman_coef_table<span class="sc">$</span>Estimate <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, objman_coef_table<span class="sc">$</span>Estimate)</span>
-<span id="cb10-432"><a href="#cb10-432" aria-hidden="true" tabindex="-1"></a>objman_coef_table<span class="sc">$</span>SE <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, objman_coef_table<span class="sc">$</span>SE)</span>
-<span id="cb10-433"><a href="#cb10-433" aria-hidden="true" tabindex="-1"></a>objman_coef_table<span class="sc">$</span>t_value <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.2f"</span>, objman_coef_table<span class="sc">$</span>t_value)</span>
-<span id="cb10-434"><a href="#cb10-434" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb10-435"><a href="#cb10-435" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-436"><a href="#cb10-436" aria-hidden="true" tabindex="-1"></a>For object manipulation movements, we did not obtain reliable results (beta = <span class="in">`r objman_slope`</span>, SE = <span class="in">`r objman_slope_se`</span>, p <span class="in">`r objman_slope_p`</span>), which is contrast to the previous analysis, also specifically in contrast to communicative gestures produced in the same ECOLANG corpus.</span>
-<span id="cb10-437"><a href="#cb10-437" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-438"><a href="#cb10-438" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, echo=FALSE, fig.height = 6, fig.width = 8, fig.cap="Figure. Menzerath's law relationship for object manipulation movements."}</span></span>
-<span id="cb10-439"><a href="#cb10-439" aria-hidden="true" tabindex="-1"></a>p_objman</span>
+<span id="cb10-359"><a href="#cb10-359" aria-hidden="true" tabindex="-1"></a>::: {.callout-note .callout-download collapse="true"}</span>
+<span id="cb10-360"><a href="#cb10-360" aria-hidden="true" tabindex="-1"></a><span class="fu"># Object manipulation analysis</span></span>
+<span id="cb10-361"><a href="#cb10-361" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, warning=FALSE, message=FALSE}</span></span>
+<span id="cb10-362"><a href="#cb10-362" aria-hidden="true" tabindex="-1"></a><span class="co"># filter for n_submovements &gt; 1</span></span>
+<span id="cb10-363"><a href="#cb10-363" aria-hidden="true" tabindex="-1"></a>objman_dat <span class="ot">&lt;-</span> objman_dat[objman_dat<span class="sc">$</span>n_submovements <span class="sc">&gt;</span> <span class="dv">1</span>, ]</span>
+<span id="cb10-364"><a href="#cb10-364" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-365"><a href="#cb10-365" aria-hidden="true" tabindex="-1"></a><span class="co"># model for objman - only ECOLANG has data, so no corpus random effect</span></span>
+<span id="cb10-366"><a href="#cb10-366" aria-hidden="true" tabindex="-1"></a>objman_menz_model <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">scale</span>(<span class="fu">log</span>(subm_dur_ms)) <span class="sc">~</span> <span class="fu">scale</span>(<span class="fu">log</span>(n_submovements)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>speaker<span class="sc">/</span>gesture_id), <span class="at">data =</span> objman_dat)</span>
+<span id="cb10-367"><a href="#cb10-367" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-368"><a href="#cb10-368" aria-hidden="true" tabindex="-1"></a><span class="co"># coefficients</span></span>
+<span id="cb10-369"><a href="#cb10-369" aria-hidden="true" tabindex="-1"></a>coef_objman <span class="ot">&lt;-</span> <span class="fu">fixef</span>(objman_menz_model)</span>
+<span id="cb10-370"><a href="#cb10-370" aria-hidden="true" tabindex="-1"></a>sum_objman <span class="ot">&lt;-</span> <span class="fu">coef</span>(<span class="fu">summary</span>(objman_menz_model))</span>
+<span id="cb10-371"><a href="#cb10-371" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-372"><a href="#cb10-372" aria-hidden="true" tabindex="-1"></a><span class="co"># summary data</span></span>
+<span id="cb10-373"><a href="#cb10-373" aria-hidden="true" tabindex="-1"></a>objman_summary <span class="ot">&lt;-</span> objman_dat <span class="sc">%&gt;%</span></span>
+<span id="cb10-374"><a href="#cb10-374" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(gesture_id, n_submovements, corpus) <span class="sc">%&gt;%</span></span>
+<span id="cb10-375"><a href="#cb10-375" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">subm_dur_median =</span> <span class="fu">median</span>(subm_dur_ms), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb10-376"><a href="#cb10-376" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-377"><a href="#cb10-377" aria-hidden="true" tabindex="-1"></a>objman_summary<span class="sc">$</span>x_scaled <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(<span class="fu">log</span>(objman_summary<span class="sc">$</span>n_submovements)))</span>
+<span id="cb10-378"><a href="#cb10-378" aria-hidden="true" tabindex="-1"></a>objman_summary<span class="sc">$</span>y_scaled <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(<span class="fu">log</span>(objman_summary<span class="sc">$</span>subm_dur_median)))</span>
+<span id="cb10-379"><a href="#cb10-379" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-380"><a href="#cb10-380" aria-hidden="true" tabindex="-1"></a><span class="co"># prediction line</span></span>
+<span id="cb10-381"><a href="#cb10-381" aria-hidden="true" tabindex="-1"></a>pred_x_obj <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fu">min</span>(objman_summary<span class="sc">$</span>x_scaled), <span class="fu">max</span>(objman_summary<span class="sc">$</span>x_scaled), <span class="at">length.out =</span> <span class="dv">100</span>)</span>
+<span id="cb10-382"><a href="#cb10-382" aria-hidden="true" tabindex="-1"></a>pred_y_obj <span class="ot">&lt;-</span> coef_objman[<span class="dv">1</span>] <span class="sc">+</span> coef_objman[<span class="dv">2</span>] <span class="sc">*</span> pred_x_obj</span>
+<span id="cb10-383"><a href="#cb10-383" aria-hidden="true" tabindex="-1"></a>pred_line_obj <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> pred_x_obj, <span class="at">y =</span> pred_y_obj)</span>
+<span id="cb10-384"><a href="#cb10-384" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-385"><a href="#cb10-385" aria-hidden="true" tabindex="-1"></a><span class="co"># per-corpus lines for objman (only ECOLANG)</span></span>
+<span id="cb10-386"><a href="#cb10-386" aria-hidden="true" tabindex="-1"></a>corpus_lines_obj <span class="ot">&lt;-</span> objman_summary <span class="sc">%&gt;%</span></span>
+<span id="cb10-387"><a href="#cb10-387" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(corpus) <span class="sc">%&gt;%</span></span>
+<span id="cb10-388"><a href="#cb10-388" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb10-389"><a href="#cb10-389" aria-hidden="true" tabindex="-1"></a>    <span class="at">intercept =</span> <span class="fu">coef</span>(<span class="fu">lm</span>(y_scaled <span class="sc">~</span> x_scaled))[<span class="dv">1</span>],</span>
+<span id="cb10-390"><a href="#cb10-390" aria-hidden="true" tabindex="-1"></a>    <span class="at">slope =</span> <span class="fu">coef</span>(<span class="fu">lm</span>(y_scaled <span class="sc">~</span> x_scaled))[<span class="dv">2</span>],</span>
+<span id="cb10-391"><a href="#cb10-391" aria-hidden="true" tabindex="-1"></a>    <span class="at">x_min =</span> <span class="fu">min</span>(x_scaled),</span>
+<span id="cb10-392"><a href="#cb10-392" aria-hidden="true" tabindex="-1"></a>    <span class="at">x_max =</span> <span class="fu">max</span>(x_scaled),</span>
+<span id="cb10-393"><a href="#cb10-393" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb10-394"><a href="#cb10-394" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb10-395"><a href="#cb10-395" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowwise</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb10-396"><a href="#cb10-396" aria-hidden="true" tabindex="-1"></a>  <span class="fu">do</span>({</span>
+<span id="cb10-397"><a href="#cb10-397" aria-hidden="true" tabindex="-1"></a>    x_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(.<span class="sc">$</span>x_min, .<span class="sc">$</span>x_max, <span class="at">length.out =</span> <span class="dv">50</span>)</span>
+<span id="cb10-398"><a href="#cb10-398" aria-hidden="true" tabindex="-1"></a>    <span class="fu">data.frame</span>(<span class="at">corpus =</span> .<span class="sc">$</span>corpus, <span class="at">x =</span> x_seq, <span class="at">y =</span> .<span class="sc">$</span>intercept <span class="sc">+</span> .<span class="sc">$</span>slope <span class="sc">*</span> x_seq)</span>
+<span id="cb10-399"><a href="#cb10-399" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb10-400"><a href="#cb10-400" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-401"><a href="#cb10-401" aria-hidden="true" tabindex="-1"></a><span class="co"># plot</span></span>
+<span id="cb10-402"><a href="#cb10-402" aria-hidden="true" tabindex="-1"></a>p_objman <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(objman_summary, <span class="fu">aes</span>(<span class="at">x =</span> x_scaled, <span class="at">y =</span> y_scaled, <span class="at">color =</span> corpus)) <span class="sc">+</span></span>
+<span id="cb10-403"><a href="#cb10-403" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>, <span class="at">size =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb10-404"><a href="#cb10-404" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> corpus_lines_obj, <span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y, <span class="at">color =</span> corpus), <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb10-405"><a href="#cb10-405" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> pred_line_obj, <span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y), <span class="at">color =</span> <span class="st">"black"</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb10-406"><a href="#cb10-406" aria-hidden="true" tabindex="-1"></a>  <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x =</span> <span class="cn">Inf</span>, <span class="at">y =</span> <span class="cn">Inf</span>, </span>
+<span id="cb10-407"><a href="#cb10-407" aria-hidden="true" tabindex="-1"></a>           <span class="at">label =</span> <span class="fu">sprintf</span>(<span class="st">"overall: y = %.3f + %.3fx"</span>, coef_objman[<span class="dv">1</span>], coef_objman[<span class="dv">2</span>]),</span>
+<span id="cb10-408"><a href="#cb10-408" aria-hidden="true" tabindex="-1"></a>           <span class="at">hjust =</span> <span class="fl">1.1</span>, <span class="at">vjust =</span> <span class="fl">1.5</span>, <span class="at">size =</span> <span class="fl">2.5</span>) <span class="sc">+</span></span>
+<span id="cb10-409"><a href="#cb10-409" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Scaled log(Number of Submovements)"</span>, </span>
+<span id="cb10-410"><a href="#cb10-410" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Scaled log(Submovement Duration)"</span>,</span>
+<span id="cb10-411"><a href="#cb10-411" aria-hidden="true" tabindex="-1"></a>       <span class="at">title =</span> <span class="st">"Menzerath's Law: Object Manipulation"</span>) <span class="sc">+</span></span>
+<span id="cb10-412"><a href="#cb10-412" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> corpus_colors) <span class="sc">+</span></span>
+<span id="cb10-413"><a href="#cb10-413" aria-hidden="true" tabindex="-1"></a>  <span class="fu">my_theme</span>()</span>
+<span id="cb10-414"><a href="#cb10-414" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-415"><a href="#cb10-415" aria-hidden="true" tabindex="-1"></a><span class="co"># save</span></span>
+<span id="cb10-416"><a href="#cb10-416" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="fu">paste0</span>(current_dir, <span class="st">"/plots/menzerath_objman.svg"</span>), p_objman, <span class="at">width =</span> <span class="dv">8</span>, <span class="at">height =</span> <span class="dv">6</span>)</span>
+<span id="cb10-417"><a href="#cb10-417" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-418"><a href="#cb10-418" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb10-419"><a href="#cb10-419" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-420"><a href="#cb10-420" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, echo=FALSE, message=FALSE, warning=FALSE}</span></span>
+<span id="cb10-421"><a href="#cb10-421" aria-hidden="true" tabindex="-1"></a><span class="co"># reporting values</span></span>
+<span id="cb10-422"><a href="#cb10-422" aria-hidden="true" tabindex="-1"></a>objman_slope <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, sum_objman[<span class="dv">2</span>, <span class="st">"Estimate"</span>])</span>
+<span id="cb10-423"><a href="#cb10-423" aria-hidden="true" tabindex="-1"></a>objman_slope_se <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, sum_objman[<span class="dv">2</span>, <span class="st">"Std. Error"</span>])</span>
+<span id="cb10-424"><a href="#cb10-424" aria-hidden="true" tabindex="-1"></a>objman_slope_p <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(sum_objman[<span class="dv">2</span>, <span class="st">"Pr(&gt;|t|)"</span>] <span class="sc">&lt;</span> <span class="fl">0.001</span>, <span class="st">"&lt; 0.001"</span>, </span>
+<span id="cb10-425"><a href="#cb10-425" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">sprintf</span>(<span class="st">"= %.3f"</span>, sum_objman[<span class="dv">2</span>, <span class="st">"Pr(&gt;|t|)"</span>]))</span>
+<span id="cb10-426"><a href="#cb10-426" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-427"><a href="#cb10-427" aria-hidden="true" tabindex="-1"></a>objman_coef_table <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb10-428"><a href="#cb10-428" aria-hidden="true" tabindex="-1"></a>  <span class="at">Parameter =</span> <span class="fu">c</span>(<span class="st">"Intercept"</span>, <span class="st">"log(Number of Submovements)"</span>),</span>
+<span id="cb10-429"><a href="#cb10-429" aria-hidden="true" tabindex="-1"></a>  <span class="at">Estimate =</span> <span class="fu">c</span>(sum_objman[<span class="dv">1</span>, <span class="st">"Estimate"</span>], sum_objman[<span class="dv">2</span>, <span class="st">"Estimate"</span>]),</span>
+<span id="cb10-430"><a href="#cb10-430" aria-hidden="true" tabindex="-1"></a>  <span class="at">SE =</span> <span class="fu">c</span>(sum_objman[<span class="dv">1</span>, <span class="st">"Std. Error"</span>], sum_objman[<span class="dv">2</span>, <span class="st">"Std. Error"</span>]),</span>
+<span id="cb10-431"><a href="#cb10-431" aria-hidden="true" tabindex="-1"></a>  <span class="at">t_value =</span> <span class="fu">c</span>(sum_objman[<span class="dv">1</span>, <span class="st">"t value"</span>], sum_objman[<span class="dv">2</span>, <span class="st">"t value"</span>]),</span>
+<span id="cb10-432"><a href="#cb10-432" aria-hidden="true" tabindex="-1"></a>  <span class="at">p_value =</span> <span class="fu">c</span>(sum_objman[<span class="dv">1</span>, <span class="st">"Pr(&gt;|t|)"</span>], sum_objman[<span class="dv">2</span>, <span class="st">"Pr(&gt;|t|)"</span>])</span>
+<span id="cb10-433"><a href="#cb10-433" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-434"><a href="#cb10-434" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-435"><a href="#cb10-435" aria-hidden="true" tabindex="-1"></a>objman_coef_table<span class="sc">$</span>p_formatted <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(objman_coef_table<span class="sc">$</span>p_value <span class="sc">&lt;</span> <span class="fl">0.001</span>, <span class="st">"&lt; 0.001"</span>,</span>
+<span id="cb10-436"><a href="#cb10-436" aria-hidden="true" tabindex="-1"></a>                                        <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, objman_coef_table<span class="sc">$</span>p_value))</span>
+<span id="cb10-437"><a href="#cb10-437" aria-hidden="true" tabindex="-1"></a>objman_coef_table<span class="sc">$</span>Estimate <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, objman_coef_table<span class="sc">$</span>Estimate)</span>
+<span id="cb10-438"><a href="#cb10-438" aria-hidden="true" tabindex="-1"></a>objman_coef_table<span class="sc">$</span>SE <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, objman_coef_table<span class="sc">$</span>SE)</span>
+<span id="cb10-439"><a href="#cb10-439" aria-hidden="true" tabindex="-1"></a>objman_coef_table<span class="sc">$</span>t_value <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.2f"</span>, objman_coef_table<span class="sc">$</span>t_value)</span>
 <span id="cb10-440"><a href="#cb10-440" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb10-441"><a href="#cb10-441" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-442"><a href="#cb10-442" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, echo=FALSE, message=FALSE, warning=FALSE}</span></span>
-<span id="cb10-443"><a href="#cb10-443" aria-hidden="true" tabindex="-1"></a>objman_coef_table <span class="sc">%&gt;%</span></span>
-<span id="cb10-444"><a href="#cb10-444" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Parameter, Estimate, SE, t_value, p_formatted) <span class="sc">%&gt;%</span></span>
-<span id="cb10-445"><a href="#cb10-445" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">format =</span> <span class="st">"html"</span>, </span>
-<span id="cb10-446"><a href="#cb10-446" aria-hidden="true" tabindex="-1"></a>        <span class="at">caption =</span> <span class="st">"Table: Fixed Effects for Object Manipulation Menzerath Model"</span>,</span>
-<span id="cb10-447"><a href="#cb10-447" aria-hidden="true" tabindex="-1"></a>        <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Parameter"</span>, <span class="st">"Estimate"</span>, <span class="st">"SE"</span>, <span class="st">"t-value"</span>, <span class="st">"p"</span>),</span>
-<span id="cb10-448"><a href="#cb10-448" aria-hidden="true" tabindex="-1"></a>        <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb10-449"><a href="#cb10-449" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"striped"</span>, <span class="st">"hover"</span>, <span class="st">"condensed"</span>),</span>
-<span id="cb10-450"><a href="#cb10-450" aria-hidden="true" tabindex="-1"></a>                <span class="at">full_width =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb10-451"><a href="#cb10-451" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb10-452"><a href="#cb10-452" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-453"><a href="#cb10-453" aria-hidden="true" tabindex="-1"></a><span class="fu">## Confound analysis: Object manipulation category</span></span>
-<span id="cb10-454"><a href="#cb10-454" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-455"><a href="#cb10-455" aria-hidden="true" tabindex="-1"></a>::: {.callout-note .callout-download collapse="true"}</span>
-<span id="cb10-456"><a href="#cb10-456" aria-hidden="true" tabindex="-1"></a><span class="fu"># Object manipulation per-corpus model fitting</span></span>
-<span id="cb10-457"><a href="#cb10-457" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, warning=FALSE, message=FALSE}</span></span>
-<span id="cb10-458"><a href="#cb10-458" aria-hidden="true" tabindex="-1"></a><span class="co"># fit for objman - only ECOLANG has data</span></span>
-<span id="cb10-459"><a href="#cb10-459" aria-hidden="true" tabindex="-1"></a>corpus_results_objman <span class="ot">&lt;-</span> <span class="fu">fit_corpus_model</span>(objman_dat, <span class="st">"ECOLANG"</span>)</span>
+<span id="cb10-442"><a href="#cb10-442" aria-hidden="true" tabindex="-1"></a>For object manipulation movements, we did not obtain reliable results (beta = <span class="in">`r objman_slope`</span>, SE = <span class="in">`r objman_slope_se`</span>, p <span class="in">`r objman_slope_p`</span>), which is contrast to the previous analysis, also specifically in contrast to communicative gestures produced in the same ECOLANG corpus.</span>
+<span id="cb10-443"><a href="#cb10-443" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-444"><a href="#cb10-444" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, echo=FALSE, fig.height = 6, fig.width = 8, fig.cap="Figure. Menzerath's law relationship for object manipulation movements."}</span></span>
+<span id="cb10-445"><a href="#cb10-445" aria-hidden="true" tabindex="-1"></a>p_objman</span>
+<span id="cb10-446"><a href="#cb10-446" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-447"><a href="#cb10-447" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-448"><a href="#cb10-448" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, echo=FALSE, message=FALSE, warning=FALSE}</span></span>
+<span id="cb10-449"><a href="#cb10-449" aria-hidden="true" tabindex="-1"></a>objman_coef_table <span class="sc">%&gt;%</span></span>
+<span id="cb10-450"><a href="#cb10-450" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Parameter, Estimate, SE, t_value, p_formatted) <span class="sc">%&gt;%</span></span>
+<span id="cb10-451"><a href="#cb10-451" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">format =</span> <span class="st">"html"</span>, </span>
+<span id="cb10-452"><a href="#cb10-452" aria-hidden="true" tabindex="-1"></a>        <span class="at">caption =</span> <span class="st">"Table: Fixed Effects for Object Manipulation Menzerath Model"</span>,</span>
+<span id="cb10-453"><a href="#cb10-453" aria-hidden="true" tabindex="-1"></a>        <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Parameter"</span>, <span class="st">"Estimate"</span>, <span class="st">"SE"</span>, <span class="st">"t-value"</span>, <span class="st">"p"</span>),</span>
+<span id="cb10-454"><a href="#cb10-454" aria-hidden="true" tabindex="-1"></a>        <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb10-455"><a href="#cb10-455" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"striped"</span>, <span class="st">"hover"</span>, <span class="st">"condensed"</span>),</span>
+<span id="cb10-456"><a href="#cb10-456" aria-hidden="true" tabindex="-1"></a>                <span class="at">full_width =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-457"><a href="#cb10-457" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-458"><a href="#cb10-458" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-459"><a href="#cb10-459" aria-hidden="true" tabindex="-1"></a><span class="fu">## Confound analysis: Object manipulation category</span></span>
 <span id="cb10-460"><a href="#cb10-460" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-461"><a href="#cb10-461" aria-hidden="true" tabindex="-1"></a>corpus_table_objman <span class="ot">&lt;-</span> corpus_results_objman</span>
-<span id="cb10-462"><a href="#cb10-462" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>beta_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>beta)</span>
-<span id="cb10-463"><a href="#cb10-463" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>SE_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>SE)</span>
-<span id="cb10-464"><a href="#cb10-464" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>CI_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"[%.3f, %.3f]"</span>, corpus_table_objman<span class="sc">$</span>CI_low, corpus_table_objman<span class="sc">$</span>CI_high)</span>
-<span id="cb10-465"><a href="#cb10-465" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>p_fmt <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(corpus_table_objman<span class="sc">$</span>p <span class="sc">&lt;</span> <span class="fl">0.001</span>, <span class="st">"&lt; 0.001"</span>, <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>p))</span>
-<span id="cb10-466"><a href="#cb10-466" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>Speaker_SD_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>Speaker_SD)</span>
-<span id="cb10-467"><a href="#cb10-467" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>R2_fixed_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>R2_fixed)</span>
-<span id="cb10-468"><a href="#cb10-468" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>R2_total_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>R2_total)</span>
-<span id="cb10-469"><a href="#cb10-469" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>delta_AIC_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.1f"</span>, corpus_table_objman<span class="sc">$</span>delta_AIC)</span>
-<span id="cb10-470"><a href="#cb10-470" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb10-471"><a href="#cb10-471" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb10-472"><a href="#cb10-472" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-473"><a href="#cb10-473" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, echo=FALSE, message=FALSE, warning=FALSE}</span></span>
-<span id="cb10-474"><a href="#cb10-474" aria-hidden="true" tabindex="-1"></a>corpus_table_objman <span class="sc">%&gt;%</span></span>
-<span id="cb10-475"><a href="#cb10-475" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Corpus, N_gestures, N_speakers, beta_fmt, SE_fmt, CI_fmt, p_fmt, Speaker_SD_fmt, R2_fixed_fmt, R2_total_fmt, delta_AIC_fmt) <span class="sc">%&gt;%</span></span>
-<span id="cb10-476"><a href="#cb10-476" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">format =</span> <span class="st">"html"</span>,</span>
-<span id="cb10-477"><a href="#cb10-477" aria-hidden="true" tabindex="-1"></a>        <span class="at">caption =</span> <span class="st">"Table: Per-corpus Menzerath effects for object manipulation category"</span>,</span>
-<span id="cb10-478"><a href="#cb10-478" aria-hidden="true" tabindex="-1"></a>        <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Corpus"</span>, <span class="st">"N gestures"</span>, <span class="st">"N speakers"</span>, <span class="st">"beta"</span>, <span class="st">"SE"</span>, <span class="st">"95% CI"</span>, <span class="st">"p"</span>, <span class="st">"Speaker SD"</span>, <span class="st">"R2_fixed"</span>, <span class="st">"R2_total"</span>, <span class="st">"dAIC"</span>),</span>
-<span id="cb10-479"><a href="#cb10-479" aria-hidden="true" tabindex="-1"></a>        <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb10-480"><a href="#cb10-480" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"striped"</span>, <span class="st">"hover"</span>, <span class="st">"condensed"</span>),</span>
-<span id="cb10-481"><a href="#cb10-481" aria-hidden="true" tabindex="-1"></a>                <span class="at">full_width =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb10-482"><a href="#cb10-482" aria-hidden="true" tabindex="-1"></a>  <span class="fu">footnote</span>(<span class="at">general =</span> <span class="st">"dAIC = AIC_loglog - AIC_linear; negative values indicate log-log model is better fit"</span>)</span>
-<span id="cb10-483"><a href="#cb10-483" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb10-484"><a href="#cb10-484" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-461"><a href="#cb10-461" aria-hidden="true" tabindex="-1"></a>::: {.callout-note .callout-download collapse="true"}</span>
+<span id="cb10-462"><a href="#cb10-462" aria-hidden="true" tabindex="-1"></a><span class="fu"># Object manipulation per-corpus model fitting</span></span>
+<span id="cb10-463"><a href="#cb10-463" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, warning=FALSE, message=FALSE}</span></span>
+<span id="cb10-464"><a href="#cb10-464" aria-hidden="true" tabindex="-1"></a><span class="co"># fit for objman - only ECOLANG has data</span></span>
+<span id="cb10-465"><a href="#cb10-465" aria-hidden="true" tabindex="-1"></a>corpus_results_objman <span class="ot">&lt;-</span> <span class="fu">fit_corpus_model</span>(objman_dat, <span class="st">"ECOLANG"</span>)</span>
+<span id="cb10-466"><a href="#cb10-466" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-467"><a href="#cb10-467" aria-hidden="true" tabindex="-1"></a>corpus_table_objman <span class="ot">&lt;-</span> corpus_results_objman</span>
+<span id="cb10-468"><a href="#cb10-468" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>beta_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>beta)</span>
+<span id="cb10-469"><a href="#cb10-469" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>SE_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>SE)</span>
+<span id="cb10-470"><a href="#cb10-470" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>CI_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"[%.3f, %.3f]"</span>, corpus_table_objman<span class="sc">$</span>CI_low, corpus_table_objman<span class="sc">$</span>CI_high)</span>
+<span id="cb10-471"><a href="#cb10-471" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>p_fmt <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(corpus_table_objman<span class="sc">$</span>p <span class="sc">&lt;</span> <span class="fl">0.001</span>, <span class="st">"&lt; 0.001"</span>, <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>p))</span>
+<span id="cb10-472"><a href="#cb10-472" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>Speaker_SD_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>Speaker_SD)</span>
+<span id="cb10-473"><a href="#cb10-473" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>R2_fixed_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>R2_fixed)</span>
+<span id="cb10-474"><a href="#cb10-474" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>R2_total_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.3f"</span>, corpus_table_objman<span class="sc">$</span>R2_total)</span>
+<span id="cb10-475"><a href="#cb10-475" aria-hidden="true" tabindex="-1"></a>corpus_table_objman<span class="sc">$</span>delta_AIC_fmt <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%.1f"</span>, corpus_table_objman<span class="sc">$</span>delta_AIC)</span>
+<span id="cb10-476"><a href="#cb10-476" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-477"><a href="#cb10-477" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb10-478"><a href="#cb10-478" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-479"><a href="#cb10-479" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, echo=FALSE, message=FALSE, warning=FALSE}</span></span>
+<span id="cb10-480"><a href="#cb10-480" aria-hidden="true" tabindex="-1"></a>corpus_table_objman <span class="sc">%&gt;%</span></span>
+<span id="cb10-481"><a href="#cb10-481" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(Corpus, N_gestures, N_speakers, beta_fmt, SE_fmt, CI_fmt, p_fmt, Speaker_SD_fmt, R2_fixed_fmt, R2_total_fmt, delta_AIC_fmt) <span class="sc">%&gt;%</span></span>
+<span id="cb10-482"><a href="#cb10-482" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(<span class="at">format =</span> <span class="st">"html"</span>,</span>
+<span id="cb10-483"><a href="#cb10-483" aria-hidden="true" tabindex="-1"></a>        <span class="at">caption =</span> <span class="st">"Table: Per-corpus Menzerath effects for object manipulation category"</span>,</span>
+<span id="cb10-484"><a href="#cb10-484" aria-hidden="true" tabindex="-1"></a>        <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Corpus"</span>, <span class="st">"N gestures"</span>, <span class="st">"N speakers"</span>, <span class="st">"beta"</span>, <span class="st">"SE"</span>, <span class="st">"95% CI"</span>, <span class="st">"p"</span>, <span class="st">"Speaker SD"</span>, <span class="st">"R2_fixed"</span>, <span class="st">"R2_total"</span>, <span class="st">"dAIC"</span>),</span>
+<span id="cb10-485"><a href="#cb10-485" aria-hidden="true" tabindex="-1"></a>        <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb10-486"><a href="#cb10-486" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"striped"</span>, <span class="st">"hover"</span>, <span class="st">"condensed"</span>),</span>
+<span id="cb10-487"><a href="#cb10-487" aria-hidden="true" tabindex="-1"></a>                <span class="at">full_width =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb10-488"><a href="#cb10-488" aria-hidden="true" tabindex="-1"></a>  <span class="fu">footnote</span>(<span class="at">general =</span> <span class="st">"dAIC = AIC_loglog - AIC_linear; negative values indicate log-log model is better fit"</span>)</span>
+<span id="cb10-489"><a href="#cb10-489" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-490"><a href="#cb10-490" aria-hidden="true" tabindex="-1"></a></span>
 </code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

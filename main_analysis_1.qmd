@@ -270,13 +270,21 @@ fit_corpus_model <- function(data, corpus_name) {
   n_gestures <- length(unique(corpus_data$gesture_id))
   n_speakers <- length(unique(corpus_data$speaker))
   
-  # log-log model
-  mod_log <- lmer(scale(log(subm_dur_ms)) ~ scale(log(n_submovements)) + (1|speaker/gesture_id), 
-                  data = corpus_data, REML = FALSE)
-  
-  # linear model
-  mod_lin <- lmer(scale(subm_dur_ms) ~ scale(n_submovements) + (1|speaker/gesture_id), 
-                  data = corpus_data, REML = FALSE)
+  # different model structure depending on number of speakers
+  if (n_speakers > 1) {
+    mod_log <- lmer(scale(log(subm_dur_ms)) ~ scale(log(n_submovements)) + (1|speaker/gesture_id), 
+                    data = corpus_data, REML = FALSE)
+    mod_lin <- lmer(scale(subm_dur_ms) ~ scale(n_submovements) + (1|speaker/gesture_id), 
+                    data = corpus_data, REML = FALSE)
+    vc <- VarCorr(mod_log)
+    speaker_sd <- attr(vc$speaker, "stddev")[1]
+  } else {
+    mod_log <- lmer(scale(log(subm_dur_ms)) ~ scale(log(n_submovements)) + (1|gesture_id), 
+                    data = corpus_data, REML = FALSE)
+    mod_lin <- lmer(scale(subm_dur_ms) ~ scale(n_submovements) + (1|gesture_id), 
+                    data = corpus_data, REML = FALSE)
+    speaker_sd <- NA
+  }
   
   # extract stats
   sum_mod <- summary(mod_log)
@@ -285,10 +293,6 @@ fit_corpus_model <- function(data, corpus_name) {
   
   # R2
   r2 <- r.squaredGLMM(mod_log)
-  
-  # speaker SD
-  vc <- VarCorr(mod_log)
-  speaker_sd <- attr(vc$speaker, "stddev")[1]
   
   # AIC comparison
   delta_aic <- AIC(mod_log) - AIC(mod_lin)
@@ -309,9 +313,10 @@ fit_corpus_model <- function(data, corpus_name) {
   )
 }
 
-# fit for gesture category - exclude ZHUBO (1 speaker)
-corpora_gesture <- c("ECOLANG", "GESres", "MULTISIMO", "SAGA", "SAGAplus")
+# fit for gesture category - now including ZHUBO
+corpora_gesture <- c("ECOLANG", "GESres", "MULTISIMO", "SAGA", "SAGAplus", "ZHUBO")
 corpus_results_gesture <- do.call(rbind, lapply(corpora_gesture, function(c) fit_corpus_model(gesdat, c)))
+
 
 # format table
 corpus_table_gesture <- corpus_results_gesture
@@ -325,6 +330,7 @@ corpus_table_gesture$Speaker_SD_fmt <- sprintf("%.3f", corpus_table_gesture$Spea
 corpus_table_gesture$R2_fixed_fmt <- sprintf("%.3f", corpus_table_gesture$R2_fixed)
 corpus_table_gesture$R2_total_fmt <- sprintf("%.3f", corpus_table_gesture$R2_total)
 corpus_table_gesture$delta_AIC_fmt <- sprintf("%.1f", corpus_table_gesture$delta_AIC)
+corpus_table_gesture$Speaker_SD_fmt <- ifelse(is.na(corpus_table_gesture$Speaker_SD), "—", sprintf("%.3f", corpus_table_gesture$Speaker_SD))
 ```
 :::
 
