@@ -24,14 +24,14 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="pt"
      inkscape:zoom="0.89496528"
-     inkscape:cx="640.80698"
-     inkscape:cy="426.27352"
+     inkscape:cx="340.23666"
+     inkscape:cy="298.89428"
      inkscape:window-width="1920"
      inkscape:window-height="1009"
      inkscape:window-x="-8"
      inkscape:window-y="1072"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg5884" /><defs
+     inkscape:current-layer="layer1" /><defs
      id="defs1"><style
        type="text/css"
        id="style1"><![CDATA[
@@ -413,8 +413,8 @@
      x="67.644363"
      y="47.635876"
      inkscape:export-filename="masterplot.png"
-     inkscape:export-xdpi="96"
-     inkscape:export-ydpi="96" /><g
+     inkscape:export-xdpi="600"
+     inkscape:export-ydpi="600" /><g
      clip-path="url(#cpMC4wMHw4NjQuMDB8MC4wMHw1NzYuMDA=)"
      id="g3152"
      transform="translate(0,220.43626)" /><defs
@@ -30152,8 +30152,8 @@
          sodipodi:role="line"
          id="tspan9-6"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Adobe Fan Heiti Std';-inkscape-font-specification:'Adobe Fan Heiti Std';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.259402"
-         x="-23.545923"
-         y="83.85788">Submovement detection in combined hand speed</tspan></text><path
+         x="-23.545921"
+         y="83.85788">Submovement detection in domaint hand speed</tspan></text><path
        style="fill:#111111;stroke:#000000;stroke-width:0.242822;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10"
        d="m -52.42048,85.975411 v 5.587214"
        id="path9" /><path

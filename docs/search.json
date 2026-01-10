@@ -1,0 +1,35 @@
+[
+  {
+    "objectID": "main_analysis_1.html",
+    "href": "main_analysis_1.html",
+    "title": "Human Gestures Are Efficient",
+    "section": "",
+    "text": "Code for dataset loading, plotting defaults\n\n\n\n\n\n\n\nWe load the gesture dataframe.\n\n\nCode\nlibrary(cowplot)\nlibrary(ggplot2)\n# Use this conditional approach:\nif (rstudioapi::isAvailable()) {\n  # Running in RStudio\n  current_dir &lt;- dirname(rstudioapi::getSourceEditorContext()$path)\n} else {\n  # Running outside RStudio (like command line quarto)\n  current_dir &lt;- here::here()\n}\n\n# load full data\nfulldat &lt;- read.csv(paste0(current_dir, \"/Data_Output/gestures_long.csv\"))\nfulldat$gesture_id &lt;- as.factor(fulldat$gesture_id)\nfulldat$corpus &lt;- as.factor(fulldat$corpus)\nfulldat$speaker &lt;- as.factor(fulldat$speaker)\nfulldat$subtype &lt;- as.factor(fulldat$subtype)\nfulldat$condition &lt;- as.factor(fulldat$condition)\n\n# gesture category only\ngesdat &lt;- subset(fulldat, condition == \"gesture\")\ngesdat$corpus &lt;- droplevels(gesdat$corpus)\ngesdat$speaker &lt;- droplevels(gesdat$speaker)\ngesdat$gesture_id &lt;- droplevels(gesdat$gesture_id)\n\n# objman category only\nobjman_dat &lt;- subset(fulldat, condition == \"objman\")\nobjman_dat$corpus &lt;- droplevels(objman_dat$corpus)\nobjman_dat$speaker &lt;- droplevels(objman_dat$speaker)\nobjman_dat$gesture_id &lt;- droplevels(objman_dat$gesture_id)\n\n\n\n\n\n\n\nCode\n# Set some plotting defaults\nlibrary(RColorBrewer)\n\n# Enhanced plotting theme\nmy_theme &lt;- function() {\n  theme_cowplot() +\n  theme(\n    text = element_text(size = 10, family = \"sans\"),\n    axis.text = element_text(size = 9, color = \"grey20\"),\n    axis.title = element_text(size = 11, face = \"bold\"),\n    plot.title = element_text(size = 12, face = \"bold\", hjust = 0),\n    panel.grid.major = element_line(color = \"grey90\", linewidth = 0.3),\n    panel.grid.minor = element_blank(),\n    panel.background = element_rect(fill = \"white\", color = NA),\n    plot.background = element_rect(fill = \"white\", color = NA),\n    legend.text = element_text(size = 9),\n    legend.title = element_text(size = 10, face = \"bold\"),\n    legend.position = \"right\",\n    legend.background = element_rect(fill = \"white\", color = \"grey80\"),\n    legend.key = element_rect(fill = \"white\", color = NA),\n    plot.margin = margin(10, 10, 10, 10)\n  )\n}\n\n# colors - more contrastive\ncorpus_colors &lt;- c(\n  \"ECOLANG\" = \"#E41A1C\",\n  \"GESres\" = \"#377EB8\", \n  \"MULTISIMO\" = \"#4DAF4A\",\n  \"SAGA\" = \"#984EA3\",\n  \"SAGAplus\" = \"#FF7F00\",\n  \"ZHUBO\" = \"#F781BF\"\n)",
+    "crumbs": [
+      "Mixed Linear Regression analysis",
+      "Basic Menzerath-Altman model"
+    ]
+  },
+  {
+    "objectID": "main_analysis_1.html#dataset-loading",
+    "href": "main_analysis_1.html#dataset-loading",
+    "title": "Human Gestures Are Efficient",
+    "section": "",
+    "text": "We load the gesture dataframe.\n\n\nCode\nlibrary(cowplot)\nlibrary(ggplot2)\n# Use this conditional approach:\nif (rstudioapi::isAvailable()) {\n  # Running in RStudio\n  current_dir &lt;- dirname(rstudioapi::getSourceEditorContext()$path)\n} else {\n  # Running outside RStudio (like command line quarto)\n  current_dir &lt;- here::here()\n}\n\n# load full data\nfulldat &lt;- read.csv(paste0(current_dir, \"/Data_Output/gestures_long.csv\"))\nfulldat$gesture_id &lt;- as.factor(fulldat$gesture_id)\nfulldat$corpus &lt;- as.factor(fulldat$corpus)\nfulldat$speaker &lt;- as.factor(fulldat$speaker)\nfulldat$subtype &lt;- as.factor(fulldat$subtype)\nfulldat$condition &lt;- as.factor(fulldat$condition)\n\n# gesture category only\ngesdat &lt;- subset(fulldat, condition == \"gesture\")\ngesdat$corpus &lt;- droplevels(gesdat$corpus)\ngesdat$speaker &lt;- droplevels(gesdat$speaker)\ngesdat$gesture_id &lt;- droplevels(gesdat$gesture_id)\n\n# objman category only\nobjman_dat &lt;- subset(fulldat, condition == \"objman\")\nobjman_dat$corpus &lt;- droplevels(objman_dat$corpus)\nobjman_dat$speaker &lt;- droplevels(objman_dat$speaker)\nobjman_dat$gesture_id &lt;- droplevels(objman_dat$gesture_id)",
+    "crumbs": [
+      "Mixed Linear Regression analysis",
+      "Basic Menzerath-Altman model"
+    ]
+  },
+  {
+    "objectID": "main_analysis_1.html#code-for-plotting-defaults",
+    "href": "main_analysis_1.html#code-for-plotting-defaults",
+    "title": "Human Gestures Are Efficient",
+    "section": "",
+    "text": "Code\n# Set some plotting defaults\nlibrary(RColorBrewer)\n\n# Enhanced plotting theme\nmy_theme &lt;- function() {\n  theme_cowplot() +\n  theme(\n    text = element_text(size = 10, family = \"sans\"),\n    axis.text = element_text(size = 9, color = \"grey20\"),\n    axis.title = element_text(size = 11, face = \"bold\"),\n    plot.title = element_text(size = 12, face = \"bold\", hjust = 0),\n    panel.grid.major = element_line(color = \"grey90\", linewidth = 0.3),\n    panel.grid.minor = element_blank(),\n    panel.background = element_rect(fill = \"white\", color = NA),\n    plot.background = element_rect(fill = \"white\", color = NA),\n    legend.text = element_text(size = 9),\n    legend.title = element_text(size = 10, face = \"bold\"),\n    legend.position = \"right\",\n    legend.background = element_rect(fill = \"white\", color = \"grey80\"),\n    legend.key = element_rect(fill = \"white\", color = NA),\n    plot.margin = margin(10, 10, 10, 10)\n  )\n}\n\n# colors - more contrastive\ncorpus_colors &lt;- c(\n  \"ECOLANG\" = \"#E41A1C\",\n  \"GESres\" = \"#377EB8\", \n  \"MULTISIMO\" = \"#4DAF4A\",\n  \"SAGA\" = \"#984EA3\",\n  \"SAGAplus\" = \"#FF7F00\",\n  \"ZHUBO\" = \"#F781BF\"\n)",
+    "crumbs": [
+      "Mixed Linear Regression analysis",
+      "Basic Menzerath-Altman model"
+    ]
+  }
+]
