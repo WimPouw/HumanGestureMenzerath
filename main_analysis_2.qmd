@@ -1,5 +1,5 @@
 ---
-title: "Human Gestures Are Efficient"
+title: "Human gestures tend to follow Menzerath's law"
 subtitle: "Mixed Linear Regression Models: Basic Menzerath-Altmann model (peak method 2)"
 author:
   - name: ""

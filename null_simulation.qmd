@@ -1,5 +1,5 @@
 ---
-title: "Human Gestures Are Efficient"
+title: "Human gestures tend to follow Menzerath's law"
 subtitle: "Null model: Menzerath's law from random peaks (simulated data)"
 author:
   - name: ""
@@ -11,7 +11,7 @@ contact:
     email: ""
 ---
 
-Here we check the null model that is used at the end of the analysis pages, on simulated data where we know the truth. The simulated data has the same structure as our dataset (corpora, speakers, number of gestures), and follows the preprocessing: peaks are at least 160 ms apart, `n_sub` is the number of intervals between peaks, and a gesture needs at least one interval.
+Here we check the null model that is used at the end of the analysis pages. The simulated data has the same structure as our dataset (corpora, speakers, number of gestures), and follows the preprocessing: peaks are at least 160 ms apart, `n_sub` is the number of intervals between peaks, and a gesture needs at least one interval.
 
 ```{r setup, message = FALSE}
 library(data.table)

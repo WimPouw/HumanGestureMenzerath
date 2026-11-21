@@ -1,5 +1,5 @@
 ---
-title: "Human Gestures Are Efficient"
+title: "Human gestures tend to follow Menzerath's law"
 subtitle: "Preprocessing: submovement extraction with peak method 1 and peak method 2"
 author:
   - name: ""

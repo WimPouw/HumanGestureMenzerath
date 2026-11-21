@@ -1,0 +1,834 @@
+---
+title: "Human gestures tend to follow Menzerath's law"
+subtitle: "Mixed Linear Regression Models: Basic Menzerath-Altmann model (peak method 1)"
+author:
+  - name: ""
+    affiliation: ""
+  - name: ""
+    affiliation: ""
+contact:
+  - name: ""
+    email: ""
+---
+
+```{r, include=FALSE}
+# which peak method is analyzed on this page (1 = above 0.15 m/s, 2 = above 10% of max speed)
+# the analysis itself is shared between both methods and lives in _analysis_body.qmd
+method <- 1
+```
+
+::: {.callout-note .callout-download collapse="true"}
+# Code for dataset loading, plotting defaults
+
+## Dataset loading
+We load the submovement dataframe of peak method `r method` (see the preprocessing page).
+```{r, warning=FALSE, message=FALSE}
+library(cowplot)
+library(ggplot2)
+
+# figures in the html at 300 dpi (saved figures are 600 dpi)
+knitr::opts_chunk$set(dpi = 300, fig.retina = 1)
+
+# Use this conditional approach:
+if (rstudioapi::isAvailable()) {
+  # Running in RStudio
+  current_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
+} else {
+  # Running outside RStudio (like command line quarto)
+  current_dir <- here::here()
+}
+
+# load full data (one row per submovement) for this peak method
+datafile <- paste0(current_dir, "/Data_Output/gestures_long_method", method, ".csv")
+fulldat <- read.csv(datafile)
+
+# events with fewer than two peaks have no interval between peaks, so no submovement duration
+fulldat <- subset(fulldat, single_unit == 0)
+
+# check: the number of rows of an event should equal its number of submovements
+# (if not, a gesture id is not unique and we remove those events)
+fulldat$event_id <- paste(fulldat$condition, fulldat$gesture_id)
+n_rows <- table(fulldat$event_id)[fulldat$event_id]
+n_removed <- length(unique(fulldat$event_id[n_rows != fulldat$n_submovements]))
+fulldat <- fulldat[n_rows == fulldat$n_submovements, ]
+
+fulldat$gesture_id <- as.factor(fulldat$gesture_id)
+fulldat$event_id <- as.factor(fulldat$event_id)
+fulldat$corpus <- as.factor(fulldat$corpus)
+fulldat$speaker <- as.factor(fulldat$speaker)
+fulldat$subtype <- as.factor(fulldat$subtype)
+fulldat$condition <- as.factor(fulldat$condition)
+
+# speakers get an id that is unique over corpora
+fulldat$speaker_id <- as.factor(paste(fulldat$corpus, fulldat$speaker))
+
+# gesture category only
+gesdat <- subset(fulldat, condition == "gesture")
+gesdat$corpus <- droplevels(gesdat$corpus)
+gesdat$speaker <- droplevels(gesdat$speaker)
+gesdat$gesture_id <- droplevels(gesdat$gesture_id)
+
+# objman category only
+objman_dat <- subset(fulldat, condition == "objman")
+objman_dat$corpus <- droplevels(objman_dat$corpus)
+objman_dat$speaker <- droplevels(objman_dat$speaker)
+objman_dat$gesture_id <- droplevels(objman_dat$gesture_id)
+
+# means and SDs of the log-transformed variables, i.e., what scale(log()) does in the models
+# we need these to draw the model lines and to get the unscaled exponent
+get_scaling <- function(data) {
+  list(mx = mean(log(data$n_submovements)), sx = sd(log(data$n_submovements)),
+       my = mean(log(data$subm_dur_ms)),    sy = sd(log(data$subm_dur_ms)))
+}
+sc_ges <- get_scaling(gesdat)
+sc_obj <- get_scaling(objman_dat)
+
+# the number of submovements is one value per gesture, so its slope compares gestures with each other
+# we split the (log) number of submovements in a part within speaker and a part between speakers:
+# x_between = the mean of the speaker, x_within = the deviation of a gesture from the mean of its speaker
+# both are divided by the same SD, so x_within + x_between is the scale(log(n_submovements)) of before
+add_predictors <- function(data, group = "speaker_id", trans = log, names = c("x_within", "x_between")) {
+  x <- trans(data$n_submovements)
+  # speaker means are taken over gestures (one value per gesture), not over submovements
+  one <- !duplicated(data$event_id)
+  speaker_mean <- tapply(x[one], as.character(data[[group]][one]), mean)
+  m <- as.numeric(speaker_mean[as.character(data[[group]])])
+  data[[names[1]]] <- (x - m) / sd(x)
+  data[[names[2]]] <- (m - mean(x)) / sd(x)
+  data
+}
+gesdat <- add_predictors(gesdat)
+objman_dat <- add_predictors(objman_dat)
+```
+
+## Code for plotting defaults
+```{r}
+# Set some plotting defaults
+library(RColorBrewer)
+
+# Enhanced plotting theme
+my_theme <- function() {
+  theme_cowplot() +
+  theme(
+    text = element_text(size = 10, family = "sans"),
+    axis.text = element_text(size = 9, color = "grey20"),
+    axis.title = element_text(size = 11, face = "bold"),
+    plot.title = element_text(size = 12, face = "bold", hjust = 0),
+    panel.grid.major = element_line(color = "grey90", linewidth = 0.3),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    legend.text = element_text(size = 9),
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.position = "right",
+    legend.background = element_rect(fill = "white", color = "grey80"),
+    legend.key = element_rect(fill = "white", color = NA),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+}
+
+# colors - more contrastive
+corpus_colors <- c(
+  "ECOLANG" = "#E41A1C",
+  "GESres" = "#377EB8",
+  "MULTISIMO" = "#4DAF4A",
+  "SAGA" = "#984EA3",
+  "SAGAplus" = "#FF7F00",
+  "ZHUBO" = "#F781BF"
+)
+```
+:::
+
+We analyze `r length(unique(gesdat$gesture_id))` gestures (`r nrow(gesdat)` submovements) and `r length(unique(objman_dat$gesture_id))` object manipulations (`r nrow(objman_dat)` submovements) that have at least two speed peaks. The number of events removed because their id was not unique is `r n_removed`.
+
+#### Models
+The models that we construct all share that they have as their response variable the log-transformed `subm_dur_ms` (submovement duration), and as a fixed effect predictor the log-transformed `n_submovements` (number of submovements, i.e., the number of intervals between speed peaks). Since there are multiple observations of submovement durations per gesture, we include `gesture_id` as a random effect to account for this non-independence. We follow the modeling approach of [@wascherVocalEfficiencyCrows2025] as provided here [https://masonyoungblood.github.io/crow_efficiency/](https://masonyoungblood.github.io/crow_efficiency/), and extend it in three ways. The number of submovements is centered within speaker (`x_within`), with the speaker mean as a separate predictor (`x_between`), so that the slope of interest compares gestures of the same speaker. The slope is allowed to vary per speaker (by-speaker random slopes). And as there are only six corpora, `corpus` is a fixed effect.
+
+Note that both variables are scaled after log-transformation, so the reported slopes are standardized. We also report the unscaled slope, which is the exponent of the power law (submovement duration ~ number of submovements^exponent).
+
+Below the blocks allows for inspection of the mixed regression models, their equations, plotting code.
+
+::: {.callout-note .callout-download collapse="true"}
+# Key mixed regression models for assessing Menzerath-Altmann law
+```{r, warning=FALSE, message=FALSE}
+library(lme4)
+library(lmerTest)
+library(dplyr)
+library(equatiomatic)
+
+# basemodel (same random structure, but without the within-speaker slope as fixed effect)
+basemodel <- lmer(scale(log(subm_dur_ms)) ~ x_between + corpus + (1 + x_within|speaker_id) + (1|gesture_id), data = gesdat)
+
+# Menzerath model: within-speaker slope, speaker mean, corpus as fixed effect, by-speaker random slopes
+gesture_menz_model <- lmer(scale(log(subm_dur_ms)) ~ x_within + x_between + corpus + (1 + x_within|speaker_id) + (1|gesture_id), data = gesdat)
+
+# For LaTeX output
+equationmenz <- extract_eq(gesture_menz_model, use_coefs = TRUE)
+```
+:::
+
+::: {.callout-note .callout-download collapse="true"}
+# Equations of the models
+
+`r equationmenz`
+
+:::
+
+# General pattern Menzerath's law in gestures
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(MuMIn)
+
+# Model comparison: base vs Menzerath model (anova refits both models with ML)
+anova_base_menz <- anova(basemodel, gesture_menz_model)
+
+# Extract ANOVA stats
+anova_chisq <- round(anova_base_menz$Chisq[2], 2)
+anova_df <- anova_base_menz$Df[2]
+anova_p <- anova_base_menz$`Pr(>Chisq)`[2]
+anova_p_fmt <- ifelse(anova_p < 0.001, "< 0.001", sprintf("= %.3f", anova_p))
+
+# AIC comparison, taken from the ML refits
+# (AICs of REML fits are not comparable when the fixed effects differ)
+aic_base <- round(anova_base_menz$AIC[1], 1)
+aic_menz <- round(anova_base_menz$AIC[2], 1)
+delta_aic_base <- round(aic_menz - aic_base, 1)
+
+# R2 for the log-log model
+r2_trans <- r.squaredGLMM(gesture_menz_model)
+
+r2_trans_fixed <- sprintf("%.3f", r2_trans[1, "R2m"])
+r2_trans_total <- sprintf("%.3f", r2_trans[1, "R2c"])
+
+# Model comparison table
+model_comparison <- data.frame(
+  Comparison = c("Base vs. Menzerath"),
+  Chi_sq = anova_chisq,
+  df = anova_df,
+  p = anova_p_fmt,
+  AIC_base = aic_base,
+  AIC_model = aic_menz,
+  delta_AIC = delta_aic_base
+)
+
+# Get coefficient summary from the Menzerath model
+sum_basic <- coef(summary(gesture_menz_model))
+
+# 95% CI for coefficients
+ci_menz <- confint(gesture_menz_model, method = "Wald")
+
+# Extract values for inline reporting (within-speaker slope)
+menz_slope <- sprintf("%.3f", sum_basic["x_within", "Estimate"])
+menz_slope_se <- sprintf("%.3f", sum_basic["x_within", "Std. Error"])
+menz_slope_t <- sprintf("%.2f", sum_basic["x_within", "t value"])
+menz_slope_p <- ifelse(sum_basic["x_within", "Pr(>|t|)"] < 0.001, "< 0.001",
+                       sprintf("= %.3f", sum_basic["x_within", "Pr(>|t|)"]))
+menz_slope_ci <- sprintf("[%.3f, %.3f]", ci_menz["x_within", 1], ci_menz["x_within", 2])
+
+# unscaled slope = exponent of the power law (standardized slope * SD of log y / SD of log x)
+menz_exponent <- sprintf("%.3f", sum_basic["x_within", "Estimate"] * sc_ges$sy / sc_ges$sx)
+menz_exponent_ci <- sprintf("[%.3f, %.3f]",
+                            ci_menz["x_within", 1] * sc_ges$sy / sc_ges$sx,
+                            ci_menz["x_within", 2] * sc_ges$sy / sc_ges$sx)
+
+# how much the slope varies between speakers (SD of the by-speaker random slopes)
+speaker_slope_sd <- sprintf("%.3f", attr(VarCorr(gesture_menz_model)$speaker_id, "stddev")["x_within"])
+
+# Create Menzerath model coefficient table with CI
+menz_coef_table <- data.frame(
+  Parameter = rownames(sum_basic),
+  Estimate = sum_basic[, "Estimate"],
+  SE = sum_basic[, "Std. Error"],
+  CI_low = ci_menz[rownames(sum_basic), 1],
+  CI_high = ci_menz[rownames(sum_basic), 2],
+  t_value = sum_basic[, "t value"],
+  p_value = sum_basic[, "Pr(>|t|)"]
+)
+menz_coef_table$Parameter <- sub("^corpus", "Corpus: ", menz_coef_table$Parameter)
+menz_coef_table$Parameter[menz_coef_table$Parameter == "(Intercept)"] <- "Intercept"
+menz_coef_table$Parameter[menz_coef_table$Parameter == "x_within"] <- "log(Number of Submovements), within speaker"
+menz_coef_table$Parameter[menz_coef_table$Parameter == "x_between"] <- "log(Number of Submovements), speaker mean"
+
+# Format columns
+menz_coef_table$p_formatted <- ifelse(menz_coef_table$p_value < 0.001, "< 0.001",
+                                      sprintf("%.3f", menz_coef_table$p_value))
+menz_coef_table$Estimate_fmt <- sprintf("%.3f", menz_coef_table$Estimate)
+menz_coef_table$SE_fmt <- sprintf("%.3f", menz_coef_table$SE)
+menz_coef_table$CI_fmt <- sprintf("[%.3f, %.3f]", menz_coef_table$CI_low, menz_coef_table$CI_high)
+menz_coef_table$t_value_fmt <- sprintf("%.2f", menz_coef_table$t_value)
+
+# log-log vs. linear, for the same model structure
+# the two models have a differently transformed response (log vs. raw duration),
+# so we first bring both AICs back to the original ms scale (Jacobian of the transformation)
+gesdat <- add_predictors(gesdat, trans = identity, names = c("xr_within", "xr_between"))
+mod_log <- update(gesture_menz_model, REML = FALSE)
+mod_lin <- lmer(scale(subm_dur_ms) ~ xr_within + xr_between + corpus + (1 + xr_within|speaker_id) + (1|gesture_id),
+                data = gesdat, REML = FALSE)
+aic_log <- AIC(mod_log) + 2 * sum(log(sc_ges$sy) + log(gesdat$subm_dur_ms))
+aic_lin <- AIC(mod_lin) + 2 * nrow(gesdat) * log(sd(gesdat$subm_dur_ms))
+delta_aic_loglin <- sprintf("%.1f", aic_log - aic_lin)
+```
+
+Adding the within-speaker slope of bout length (number of submovements) as a predictor was compared to the base model (χ² = `r anova_chisq`, df = `r anova_df`, p `r anova_p_fmt`; ΔAIC = `r delta_aic_base`).
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+model_comparison %>%
+  kable(format = "html",
+        caption = "Table: Model Comparison (Base vs. Menzerath)",
+        col.names = c("Comparison", "χ²", "df", "p", "AIC (base)", "AIC (model)", "ΔAIC"),
+        align = c("l", "r", "r", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE)
+```
+
+We assessed the overall relationship between number of submovements and submovement duration within speakers (β = `r menz_slope`, 95% CI `r menz_slope_ci`, SE = `r menz_slope_se`, p `r menz_slope_p`). The unscaled exponent of the power law is `r menz_exponent` (95% CI `r menz_exponent_ci`). The SD of the slope between speakers is `r speaker_slope_sd`. The fixed effects explain a proportion of `r r2_trans_fixed` of the variance (R2 marginal), and the full model `r r2_trans_total` (R2 conditional). The log-log model compared to a linear model with the same structure gives ΔAIC = `r delta_aic_loglin` (AIC_loglog - AIC_linear, both on the original ms scale; negative values indicate log-log model is better fit).
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+menz_coef_table %>%
+  select(Parameter, Estimate_fmt, SE_fmt, CI_fmt, t_value_fmt, p_formatted) %>%
+  kable(format = "html", row.names = FALSE,
+        caption = "Table: Fixed Effects for Menzerath Model",
+        col.names = c("Parameter", "Estimate", "SE", "95% CI", "t-value", "p"),
+        align = c("l", "r", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE)
+```
+
+# Per-corpus slopes
+
+::: {.callout-note .callout-download collapse="true"}
+# Per-corpus model fitting
+```{r, warning=FALSE, message=FALSE}
+# one model with a within-speaker slope for each corpus (instead of a separate model per corpus)
+# this is the Menzerath model with an interaction between corpus and x_within,
+# written such that each corpus directly gets its own intercept and slope
+corpus_slope_model <- lmer(scale(log(subm_dur_ms)) ~ 0 + corpus + corpus:x_within + x_between + (1 + x_within|speaker_id) + (1|gesture_id), data = gesdat)
+
+# does the slope differ between corpora? (anova refits both models with ML)
+anova_corpus <- anova(gesture_menz_model, corpus_slope_model)
+corpus_chisq <- round(anova_corpus$Chisq[2], 2)
+corpus_df <- anova_corpus$Df[2]
+corpus_p_fmt <- ifelse(anova_corpus$`Pr(>Chisq)`[2] < 0.001, "< 0.001", sprintf("= %.3f", anova_corpus$`Pr(>Chisq)`[2]))
+
+# extract the slope of each corpus
+sum_corpus <- coef(summary(corpus_slope_model))
+ci_corpus <- confint(corpus_slope_model, method = "Wald")
+slope_rows <- grep(":x_within$", rownames(sum_corpus), value = TRUE)
+
+corpus_results_gesture <- data.frame(
+  Corpus = sub("^corpus", "", sub(":x_within$", "", slope_rows)),
+  beta = sum_corpus[slope_rows, "Estimate"],
+  SE = sum_corpus[slope_rows, "Std. Error"],
+  CI_low = ci_corpus[slope_rows, 1],
+  CI_high = ci_corpus[slope_rows, 2],
+  p = sum_corpus[slope_rows, "Pr(>|t|)"]
+)
+corpus_results_gesture$exponent <- corpus_results_gesture$beta * sc_ges$sy / sc_ges$sx
+
+# number of gestures and speakers per corpus
+corpus_n <- gesdat %>%
+  group_by(corpus) %>%
+  summarise(N_gestures = n_distinct(gesture_id), N_speakers = n_distinct(speaker_id), .groups = "drop")
+corpus_results_gesture <- merge(corpus_results_gesture, corpus_n, by.x = "Corpus", by.y = "corpus")
+
+# we test six corpora, so we also give Holm-corrected p-values
+corpus_results_gesture$p_holm <- p.adjust(corpus_results_gesture$p, method = "holm")
+
+# format table
+corpus_table_gesture <- corpus_results_gesture
+row.names(corpus_table_gesture) <- NULL
+corpus_table_gesture$beta_fmt <- sprintf("%.3f", corpus_table_gesture$beta)
+corpus_table_gesture$SE_fmt <- sprintf("%.3f", corpus_table_gesture$SE)
+corpus_table_gesture$CI_fmt <- sprintf("[%.3f, %.3f]", corpus_table_gesture$CI_low, corpus_table_gesture$CI_high)
+corpus_table_gesture$p_fmt <- ifelse(corpus_table_gesture$p < 0.001, "< 0.001", sprintf("%.3f", corpus_table_gesture$p))
+corpus_table_gesture$p_holm_fmt <- ifelse(corpus_table_gesture$p_holm < 0.001, "< 0.001", sprintf("%.3f", corpus_table_gesture$p_holm))
+corpus_table_gesture$exponent_fmt <- sprintf("%.3f", corpus_table_gesture$exponent)
+```
+:::
+
+Allowing the within-speaker slope to differ per corpus was compared to the model with one slope (χ² = `r corpus_chisq`, df = `r corpus_df`, p `r corpus_p_fmt`).
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+corpus_table_gesture %>%
+  select(Corpus, N_gestures, N_speakers, beta_fmt, SE_fmt, CI_fmt, p_fmt, p_holm_fmt, exponent_fmt) %>%
+  kable(format = "html",
+        caption = "Table: Per-corpus Menzerath effects for gesture category (within-speaker slopes from one model)",
+        col.names = c("Corpus", "N gestures", "N speakers", "beta", "SE", "95% CI", "p", "p (Holm)", "Exponent"),
+        align = c("l", "r", "r", "r", "r", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE) %>%
+  footnote(general = "beta = standardized within-speaker slope; Exponent = unscaled log-log slope")
+```
+
+# Confound Analysis: Object Manipulation
+
+To assess whether the Menzerath-Altmann relationship is specific to communicative gestures, we repeat the analysis for object manipulation movements which were also annotated in the ECOLANG corpus. We should expect here that these movements follow communicative efficiency principles less (but they might be regulated by general efficiency principles).
+
+::: {.callout-note .callout-download collapse="true"}
+# Object manipulation analysis
+```{r, warning=FALSE, message=FALSE}
+# model for objman - only ECOLANG has data, so no corpus effect
+objman_menz_model <- lmer(scale(log(subm_dur_ms)) ~ x_within + x_between + (1 + x_within|speaker_id) + (1|gesture_id), data = objman_dat)
+
+# coefficients
+sum_objman <- coef(summary(objman_menz_model))
+ci_objman <- confint(objman_menz_model, method = "Wald")
+
+# direct test of gestures against object manipulations within the same corpus
+# (a reliable slope for gestures and an unreliable one for objman is not yet a difference)
+ecodat <- subset(fulldat, corpus %in% unique(objman_dat$corpus))
+ecodat$speaker_id <- droplevels(ecodat$speaker_id)
+ecodat$event_id <- droplevels(ecodat$event_id)
+ecodat$condition <- relevel(droplevels(ecodat$condition), ref = "gesture")
+
+# number of submovements is centered within speaker and condition
+ecodat$speaker_condition <- paste(ecodat$speaker_id, ecodat$condition)
+ecodat <- add_predictors(ecodat, group = "speaker_condition")
+
+condition_model <- lmer(scale(log(subm_dur_ms)) ~ x_within * condition + x_between + (1 + x_within|speaker_id) + (1|event_id), data = ecodat)
+sum_condition <- coef(summary(condition_model))
+ci_condition <- confint(condition_model, method = "Wald")
+```
+:::
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# reporting values
+objman_slope <- sprintf("%.3f", sum_objman["x_within", "Estimate"])
+objman_slope_se <- sprintf("%.3f", sum_objman["x_within", "Std. Error"])
+objman_slope_ci <- sprintf("[%.3f, %.3f]", ci_objman["x_within", 1], ci_objman["x_within", 2])
+objman_slope_p <- ifelse(sum_objman["x_within", "Pr(>|t|)"] < 0.001, "< 0.001",
+                         sprintf("= %.3f", sum_objman["x_within", "Pr(>|t|)"]))
+
+# table of fixed effects for a model
+make_coef_table <- function(sum_mod, ci_mod, labels) {
+  data.frame(
+    Parameter = labels[rownames(sum_mod)],
+    Estimate = sprintf("%.3f", sum_mod[, "Estimate"]),
+    SE = sprintf("%.3f", sum_mod[, "Std. Error"]),
+    CI = sprintf("[%.3f, %.3f]", ci_mod[rownames(sum_mod), 1], ci_mod[rownames(sum_mod), 2]),
+    t_value = sprintf("%.2f", sum_mod[, "t value"]),
+    p_formatted = ifelse(sum_mod[, "Pr(>|t|)"] < 0.001, "< 0.001", sprintf("%.3f", sum_mod[, "Pr(>|t|)"]))
+  )
+}
+coef_labels <- c("(Intercept)" = "Intercept",
+                 "x_within" = "log(Number of Submovements), within speaker",
+                 "x_between" = "log(Number of Submovements), speaker mean",
+                 "conditionobjman" = "Condition (objman vs. gesture)",
+                 "x_within:conditionobjman" = "log(Number of Submovements), within speaker x Condition")
+
+objman_coef_table <- make_coef_table(sum_objman, ci_objman, coef_labels)
+condition_coef_table <- make_coef_table(sum_condition, ci_condition, coef_labels)
+
+int_row <- "x_within:conditionobjman"
+int_slope <- sprintf("%.3f", sum_condition[int_row, "Estimate"])
+int_slope_se <- sprintf("%.3f", sum_condition[int_row, "Std. Error"])
+int_slope_ci <- sprintf("[%.3f, %.3f]", ci_condition[int_row, 1], ci_condition[int_row, 2])
+int_slope_p <- ifelse(sum_condition[int_row, "Pr(>|t|)"] < 0.001, "< 0.001", sprintf("= %.3f", sum_condition[int_row, "Pr(>|t|)"]))
+```
+
+For object manipulation movements, the relationship between number of submovements and submovement duration within speakers was as follows (beta = `r objman_slope`, 95% CI `r objman_slope_ci`, SE = `r objman_slope_se`, p `r objman_slope_p`).
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+objman_coef_table %>%
+  kable(format = "html", row.names = FALSE,
+        caption = "Table: Fixed Effects for Object Manipulation Menzerath Model",
+        col.names = c("Parameter", "Estimate", "SE", "95% CI", "t-value", "p"),
+        align = c("l", "r", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE)
+```
+
+To test whether the slope for object manipulations differs from the slope for communicative gestures produced in the same corpus, we fitted one model on both conditions with an interaction between number of submovements and condition. The interaction gives the difference in slope for object manipulations relative to gestures (beta = `r int_slope`, 95% CI `r int_slope_ci`, SE = `r int_slope_se`, p `r int_slope_p`).
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+condition_coef_table %>%
+  kable(format = "html", row.names = FALSE,
+        caption = "Table: Fixed Effects for the gesture vs. object manipulation model (same corpus)",
+        col.names = c("Parameter", "Estimate", "SE", "95% CI", "t-value", "p"),
+        align = c("l", "r", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE)
+```
+
+# Figure
+
+All lines in the figure have the within-speaker slopes of the mixed models reported above, and are not simple correlations. Each line is drawn through the mean of the data points it belongs to. Each data point is one gesture (median submovement duration against number of submovements). The axes of panel B and C are scaled with the means and SDs of the gesture data, and panel D with those of the object manipulations.
+
+::: {.callout-note .callout-download collapse="true"}
+# Plotting code for the figure
+```{r, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(cowplot)
+library(png)
+library(grid)
+
+# create plots folder
+plot_dir <- paste0(current_dir, "/plots")
+dir.create(plot_dir, showWarnings = FALSE)
+
+# within-speaker slopes of the models
+slope_menz <- fixef(gesture_menz_model)["x_within"]
+slope_objman <- fixef(objman_menz_model)["x_within"]
+
+# a line with a model slope that goes through the mean of the data points
+model_line <- function(x, y, slope, n = 50) {
+  x_seq <- seq(min(x), max(x), length.out = n)
+  data.frame(x = x_seq, y = mean(y) + slope * (x_seq - mean(x)))
+}
+
+# get median submovement duration per gesture
+gesdat_summary <- gesdat %>%
+  group_by(gesture_id, n_submovements, corpus) %>%
+  summarise(subm_dur_median = median(subm_dur_ms), .groups = "drop")
+
+# scale with the same parameters as in the models
+gesdat_summary$x_scaled <- (log(gesdat_summary$n_submovements) - sc_ges$mx) / sc_ges$sx
+gesdat_summary$y_scaled <- (log(gesdat_summary$subm_dur_median) - sc_ges$my) / sc_ges$sy
+
+# overall model line
+pred_line <- model_line(gesdat_summary$x_scaled, gesdat_summary$y_scaled, slope_menz, n = 100)
+
+# per-corpus model lines (slopes from the model with a slope for each corpus)
+corpus_lines <- do.call(rbind, lapply(seq_len(nrow(corpus_results_gesture)), function(i) {
+  r <- corpus_results_gesture[i, ]
+  pts <- gesdat_summary[gesdat_summary$corpus == r$Corpus, ]
+  cbind(corpus = r$Corpus, model_line(pts$x_scaled, pts$y_scaled, r$beta))
+}))
+corpus_lines$corpus <- factor(corpus_lines$corpus, levels = levels(gesdat_summary$corpus))
+
+# per-corpus labels with the model estimates
+corpus_labels <- data.frame(
+  corpus = factor(corpus_results_gesture$Corpus, levels = levels(gesdat_summary$corpus)),
+  label = sprintf("beta = %.3f, p (Holm) %s", corpus_results_gesture$beta,
+                  ifelse(corpus_results_gesture$p_holm < 0.001, "< 0.001", sprintf("= %.3f", corpus_results_gesture$p_holm)))
+)
+
+# panel A: example of the peak finding (premade image)
+img_A <- readPNG(paste0(plot_dir, "/speedpeaks.png"))
+p_A <- ggdraw() + draw_grob(rasterGrob(img_A, interpolate = TRUE))
+
+# panel B: all corpora
+p_B <- ggplot(gesdat_summary, aes(x = x_scaled, y = y_scaled, color = corpus)) +
+  geom_point(alpha = 0.5, size = 2) +
+  geom_line(data = corpus_lines, aes(x = x, y = y, color = corpus), linewidth = 0.8) +
+  geom_line(data = pred_line, aes(x = x, y = y), color = "black", linewidth = 1.2, linetype = "dashed", inherit.aes = FALSE) +
+  annotate("text", x = Inf, y = Inf,
+           label = sprintf("overall: beta = %.3f, p %s", slope_menz, menz_slope_p),
+           hjust = 1.1, vjust = 1.5, size = 3.5) +
+  labs(x = "Scaled log(Number of Submovements)",
+       y = "Scaled log(Submovement Duration)",
+       title = "Menzerath's Law: All Corpora") +
+  scale_color_manual(values = corpus_colors, guide = "none") +
+  my_theme()
+
+# panel C: faceted plot per corpus
+p_C <- ggplot(gesdat_summary, aes(x = x_scaled, y = y_scaled, color = corpus)) +
+  geom_point(alpha = 0.5, size = 2) +
+  geom_line(data = corpus_lines, aes(x = x, y = y, color = corpus), linewidth = 2) +
+  geom_line(data = pred_line, aes(x = x, y = y), color = "black", linewidth = 1, linetype = "dashed", inherit.aes = FALSE) +
+  geom_text(data = corpus_labels, aes(x = Inf, y = Inf, label = label),
+            color = "black", hjust = 1.1, vjust = 1.5, size = 3, inherit.aes = FALSE) +
+  facet_wrap(~ corpus, scales = "free") +
+  labs(x = "Scaled log(Number of Submovements)",
+       y = "Scaled log(Submovement Duration)",
+       title = "Menzerath's Law: Per Corpus") +
+  scale_color_manual(values = corpus_colors, guide = "none") +
+  my_theme() +
+  theme(strip.background = element_rect(fill = "grey90"),
+        strip.text = element_text(face = "bold"))
+
+# panel D: object manipulation, on the scale of the objman data
+objman_summary <- objman_dat %>%
+  group_by(gesture_id, n_submovements, corpus) %>%
+  summarise(subm_dur_median = median(subm_dur_ms), .groups = "drop")
+
+objman_summary$x_scaled <- (log(objman_summary$n_submovements) - sc_obj$mx) / sc_obj$sx
+objman_summary$y_scaled <- (log(objman_summary$subm_dur_median) - sc_obj$my) / sc_obj$sy
+
+# objman model line
+pred_line_obj <- model_line(objman_summary$x_scaled, objman_summary$y_scaled, slope_objman, n = 100)
+
+p_D <- ggplot(objman_summary, aes(x = x_scaled, y = y_scaled, color = corpus)) +
+  geom_point(alpha = 0.5, size = 2) +
+  geom_line(data = pred_line_obj, aes(x = x, y = y), color = "black", linewidth = 2, inherit.aes = FALSE) +
+  annotate("text", x = Inf, y = Inf,
+           label = sprintf("objman: beta = %.3f, p %s", slope_objman, objman_slope_p),
+           hjust = 1.1, vjust = 1.5, size = 3.5) +
+  labs(x = "Scaled log(Number of Submovements)",
+       y = "Scaled log(Submovement Duration)",
+       title = "Confound analysis: Object Manipulation") +
+  scale_color_manual(values = corpus_colors, guide = "none") +
+  my_theme() +
+  theme(plot.background = element_rect(fill = "white", color = "#B22222", linewidth = 1.5))
+
+# combined figure: A and C on the left, B and D on the right
+p_left <- plot_grid(p_A, p_C, ncol = 1, rel_heights = c(1, 2.1), labels = c("A", "C"))
+p_right <- plot_grid(p_B, p_D, ncol = 1, rel_heights = c(1, 1), labels = c("B", "D"))
+p_panels <- plot_grid(p_left, p_right, ncol = 2, rel_widths = c(1.6, 1))
+p_title <- ggdraw() +
+  draw_label(paste0("Testing for Menzerath's law in co-speech gesture (peak method ", method, ")"),
+             fontface = "bold", size = 16, x = 0.01, hjust = 0)
+p_figure <- plot_grid(p_title, p_panels, ncol = 1, rel_heights = c(0.05, 1))
+
+# save plots at 600 dpi
+ggsave(paste0(plot_dir, "/menzerath_figure_method", method, ".png"), p_figure, width = 16, height = 10, dpi = 600, bg = "white")
+ggsave(paste0(plot_dir, "/menzerath_all_corpora_method", method, ".png"), p_B, width = 8, height = 6, dpi = 600, bg = "white")
+ggsave(paste0(plot_dir, "/menzerath_per_corpus_method", method, ".png"), p_C, width = 12, height = 8, dpi = 600, bg = "white")
+ggsave(paste0(plot_dir, "/menzerath_objman_method", method, ".png"), p_D, width = 8, height = 6, dpi = 600, bg = "white")
+```
+:::
+
+```{r, echo=FALSE, fig.height = 10, fig.width = 16, fig.cap="Figure. (A) Example of the peak finding procedure for the dominant hand of a gesture event, where the intervals between speed peaks are the submovements. (B) All corpora combined with the overall within-speaker slope (black, dashed) and the per-corpus slopes. (C) Per corpus, with the per-corpus slope (colored, with standardized slope and Holm-corrected p) and the overall slope (dashed) for reference. (D) Object manipulations with the within-speaker slope (black)."}
+p_figure
+```
+
+# Null model
+
+The intervals between speed peaks have to fit within the duration of a gesture. A gesture with more peaks therefore tends to have shorter intervals, even if nothing is abbreviated. To assess this we simulate a null model in which peaks are placed at random within each gesture, keeping the real gesture durations, a minimum gap between peaks that is the same as in the peak detection (160 ms), and a peak rate that is matched per speaker. We then fit the same mixed model on each simulated dataset and compare the observed slope to the slopes that arise under the null. An observed slope that is more negative than the null slopes indicates abbreviation beyond what random peaks would give.
+
+Note that `n_sub` is the number of intervals between peaks, as in the preprocessing.
+
+::: {.callout-note .callout-download collapse="true"}
+# Null model code
+```{r, warning=FALSE, message=FALSE}
+library(data.table)
+library(lmerTest)
+set.seed(2137)
+
+d <- fread(datafile)
+
+# events with at least two peaks (so at least one interval)
+d <- d[single_unit == 0]
+d[, gid := paste(corpus, speaker, condition, gesture_id)]
+d[, sub_dur := subm_dur_ms / 1000]
+d[, n_sub := n_submovements]
+
+# n_submovements counts the intervals between peaks; rows are those intervals
+d <- d[, if (.N == n_sub[1]) .SD, by = gid]
+
+# gesture duration in seconds, onset to offset from the annotation
+d[, gesture_dur := duration_ms / 1000]
+
+g <- d[condition == "gesture"]
+o <- d[condition == "objman"]
+
+# minimum time between peaks in seconds (PEAK_DIST = 4 frames at 25 fps in the preprocessing)
+min_gap <- 0.16
+
+# the same model as in the analysis above:
+# x = number of submovements within speaker, xb = speaker mean, by-speaker random slopes,
+# and corpus as fixed effect when there is more than one corpus
+paper_model <- function(d) {
+  d <- copy(d)
+  d[, spk := paste(corpus, speaker)]
+  d[, lx := log(n_sub)]
+  # speaker means are taken over gestures
+  d[, m := mean(lx[!duplicated(gid)]), by = spk]
+  d[, x := (lx - m) / sd(d$lx)]
+  d[, xb := (m - mean(d$lx)) / sd(d$lx)]
+  d[, y := scale(log(sub_dur))[, 1]]
+  f <- if (uniqueN(d$corpus) > 1) y ~ x + xb + corpus + (1 + x | spk) + (1 | gid) else y ~ x + xb + (1 + x | spk) + (1 | gid)
+  lmer(f, data = d, control = lmerControl(calc.derivs = FALSE))
+}
+
+sim_gesture <- function(dur, mean_iv, gap = min_gap) {
+  for (i in 1:1000) {
+    t <- cumsum(gap + rexp(ceiling(dur / gap) + 2, 1 / (mean_iv - gap)))
+    t <- t - runif(1) * t[1]
+    iv <- diff(t[t <= dur])
+    if (length(iv) >= 1) return(iv)
+  }
+  NULL
+}
+
+null_slopes <- function(d, nsim = 1000) {
+  gest <- unique(d[, .(corpus, speaker, gid, gesture_dur, n_sub)])
+  # n_sub + 1 is the number of peaks
+  gest[, mean_iv := sum(gesture_dur) / sum(n_sub + 1), by = .(corpus, speaker)]
+  for (r in 1:3) {
+    s <- gest[, .(n = length(sim_gesture(gesture_dur, mean_iv))), by = gid]
+    gest[s, on = "gid", n_sim := i.n]
+    gest[, mean_iv := min_gap + (mean_iv - min_gap) * mean(n_sim) / mean(n_sub), by = .(corpus, speaker)]
+  }
+  sapply(1:nsim, function(k) {
+    s <- gest[, .(sub_dur = sim_gesture(gesture_dur, mean_iv)), by = .(corpus, speaker, gid)]
+    s[, n_sub := .N, by = gid]
+    unname(fixef(paper_model(s))["x"])
+  })
+}
+
+# observed
+m_g <- paper_model(g)
+m_o <- paper_model(o)
+
+# null
+null_g <- null_slopes(g)
+null_o <- null_slopes(o)
+
+obs_g <- fixef(m_g)[["x"]]
+obs_o <- fixef(m_o)[["x"]]
+res <- rbind(
+  gestures      = c(observed = obs_g, null_mean = mean(null_g),
+                    quantile(null_g, c(0.025, 0.975)), p = (1 + sum(null_g <= obs_g)) / 1001),
+  manipulations = c(observed = obs_o, null_mean = mean(null_o),
+                    quantile(null_o, c(0.025, 0.975)), p = (1 + sum(null_o <= obs_o)) / 1001))
+
+# histograms of the null slopes with the observed slope in red
+plot_null <- function() {
+  par(mfrow = c(1, 2))
+  hist(null_g, main = "gestures", xlab = "slope", xlim = range(null_g, obs_g))
+  abline(v = obs_g, col = "red")
+  hist(null_o, main = "object manipulations", xlab = "slope", xlim = range(null_o, obs_o))
+  abline(v = obs_o, col = "red")
+}
+
+# save at 600 dpi
+png(paste0(plot_dir, "/menzerath_null_method", method, ".png"), width = 10, height = 5, units = "in", res = 600)
+plot_null()
+invisible(dev.off())
+```
+:::
+
+## Observed
+
+```{r}
+summary(m_g)$coefficients
+VarCorr(m_g)
+
+summary(m_o)$coefficients
+```
+
+## Observed against null
+
+The table gives the observed slope, the mean and the 2.5% and 97.5% quantiles of the null slopes, and the proportion of null slopes that are equal to or more negative than the observed slope (p, 100 simulations).
+
+```{r}
+round(res, 3)
+```
+
+```{r, echo=FALSE, fig.height = 5, fig.width = 10, fig.cap="Figure. Slopes under the null model (histogram) and the observed slope (red line), for gestures and for object manipulations."}
+plot_null()
+```
+
+# Gesture types
+
+Here we compare the slopes between gesture types. The corpora use different labels, so we first recode them to four general gesture types. For combined labels (e.g., iconic-beat in SAGA) we take the label that comes first. Gestures without a label that fits one of the types are excluded from this analysis. The model has the same structure as the models above, with a within-speaker slope for each gesture type.
+
+::: {.callout-note .callout-download collapse="true"}
+# Gesture type recoding and model fitting
+```{r, warning=FALSE, message=FALSE}
+# recoding of the labels of the corpora to general gesture types
+# for combined labels (e.g., iconic-beat) we take the label that comes first
+recode_type <- function(subtype) {
+  # (trimws as one SAGA label has a space at the end: "iconic ")
+  first <- sub("-.*$", "", trimws(tolower(as.character(subtype))))
+  type <- rep("excluded", length(first))
+  type[first %in% c("beat", "beatgest")] <- "beat"
+  type[first %in% c("repgest", "iconic", "metaphoric")] <- "representational"
+  type[first %in% c("point", "deictic")] <- "pointing"
+  type[first %in% c("praggest", "discourse")] <- "pragmatic"
+  factor(type, levels = c("beat", "representational", "pointing", "pragmatic", "excluded"))
+}
+
+typedat_all <- gesdat
+typedat_all$gesture_type <- recode_type(typedat_all$subtype)
+
+# overview of which labels go to which gesture type, per corpus (with number of gestures)
+type_labels <- typedat_all %>%
+  distinct(gesture_id, corpus, subtype, gesture_type) %>%
+  mutate(label = as.character(subtype),
+         label = ifelse(is.na(label), "no label", ifelse(grepl("^[0-9]+$", label), "no label (number)", label))) %>%
+  count(gesture_type, corpus, label) %>%
+  arrange(gesture_type, corpus, desc(n)) %>%
+  group_by(gesture_type, corpus) %>%
+  summarise(labels = paste0(label, " (", n, ")", collapse = ", "), n = sum(n), .groups = "drop")
+
+type_mapping <- tapply(type_labels$labels, list(type_labels$gesture_type, type_labels$corpus), function(x) x[1])
+type_mapping[is.na(type_mapping)] <- ""
+type_mapping <- data.frame(Type = rownames(type_mapping), type_mapping, 
+                           Total = as.numeric(tapply(type_labels$n, type_labels$gesture_type, sum)[rownames(type_mapping)]),
+                           check.names = FALSE)
+type_mapping$Total[is.na(type_mapping$Total)] <- 0
+
+# data for the model: only gestures with a gesture type
+typedat <- subset(typedat_all, gesture_type != "excluded")
+typedat$gesture_type <- droplevels(typedat$gesture_type)
+typedat$corpus <- droplevels(typedat$corpus)
+typedat$speaker_id <- droplevels(typedat$speaker_id)
+typedat$gesture_id <- droplevels(typedat$gesture_id)
+
+# number of submovements within speaker and speaker mean, as before, now for this selection of gestures
+typedat <- add_predictors(typedat)
+sc_type <- get_scaling(typedat)
+
+# model with one slope for all gesture types (gesture type only as main effect)
+type_base_model <- lmer(scale(log(subm_dur_ms)) ~ x_within + gesture_type + x_between + corpus + (1 + x_within|speaker_id) + (1|gesture_id), data = typedat)
+
+# model with a within-speaker slope for each gesture type
+# (written such that each gesture type directly gets its own intercept and slope)
+type_slope_model <- lmer(scale(log(subm_dur_ms)) ~ 0 + gesture_type + gesture_type:x_within + x_between + corpus + (1 + x_within|speaker_id) + (1|gesture_id), data = typedat)
+
+# does the slope differ between gesture types? (anova refits both models with ML)
+anova_type <- anova(type_base_model, type_slope_model)
+type_chisq <- round(anova_type$Chisq[2], 2)
+type_df <- anova_type$Df[2]
+type_p_fmt <- ifelse(anova_type$`Pr(>Chisq)`[2] < 0.001, "< 0.001", sprintf("= %.3f", anova_type$`Pr(>Chisq)`[2]))
+
+# extract the slope of each gesture type
+sum_type <- coef(summary(type_slope_model))
+ci_type <- confint(type_slope_model, method = "Wald")
+type_rows <- grep(":x_within$", rownames(sum_type), value = TRUE)
+
+type_results <- data.frame(
+  Type = sub("^gesture_type", "", sub(":x_within$", "", type_rows)),
+  beta = sum_type[type_rows, "Estimate"],
+  SE = sum_type[type_rows, "Std. Error"],
+  CI_low = ci_type[type_rows, 1],
+  CI_high = ci_type[type_rows, 2],
+  p = sum_type[type_rows, "Pr(>|t|)"]
+)
+type_results$exponent <- type_results$beta * sc_type$sy / sc_type$sx
+type_results$p_holm <- p.adjust(type_results$p, method = "holm")
+
+# number of gestures, speakers and corpora per gesture type
+type_n <- typedat %>%
+  group_by(gesture_type) %>%
+  summarise(N_gestures = n_distinct(gesture_id), N_speakers = n_distinct(speaker_id), 
+            N_corpora = n_distinct(corpus), .groups = "drop")
+type_results <- merge(type_results, type_n, by.x = "Type", by.y = "gesture_type", sort = FALSE)
+
+# format table
+type_table <- type_results
+type_table$beta_fmt <- sprintf("%.3f", type_table$beta)
+type_table$SE_fmt <- sprintf("%.3f", type_table$SE)
+type_table$CI_fmt <- sprintf("[%.3f, %.3f]", type_table$CI_low, type_table$CI_high)
+type_table$p_fmt <- ifelse(type_table$p < 0.001, "< 0.001", sprintf("%.3f", type_table$p))
+type_table$p_holm_fmt <- ifelse(type_table$p_holm < 0.001, "< 0.001", sprintf("%.3f", type_table$p_holm))
+type_table$exponent_fmt <- sprintf("%.3f", type_table$exponent)
+```
+:::
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+type_mapping %>%
+  kable(format = "html", row.names = FALSE,
+        caption = "Table: Labels of each corpus that are recoded to each gesture type, with the number of gestures in the analysis between brackets") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE)
+```
+
+Allowing the within-speaker slope to differ per gesture type was compared to the model with one slope (χ² = `r type_chisq`, df = `r type_df`, p `r type_p_fmt`).
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+type_table %>%
+  select(Type, N_gestures, N_speakers, N_corpora, beta_fmt, SE_fmt, CI_fmt, p_fmt, p_holm_fmt, exponent_fmt) %>%
+  kable(format = "html", row.names = FALSE,
+        caption = "Table: Menzerath effects per gesture type (within-speaker slopes from one model)",
+        col.names = c("Gesture type", "N gestures", "N speakers", "N corpora", "beta", "SE", "95% CI", "p", "p (Holm)", "Exponent"),
+        align = c("l", "r", "r", "r", "r", "r", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE) %>%
+  footnote(general = "beta = standardized within-speaker slope; Exponent = unscaled log-log slope")
+```
+
+
