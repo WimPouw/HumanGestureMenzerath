@@ -1,0 +1,529 @@
+---
+title: "Human Gestures Are Efficient"
+subtitle: "Mixed Linear Regression Models: Basic Menzerath-Altman model"
+author:
+  - name: ""
+    affiliation: ""
+  - name: ""
+    affiliation: ""
+contact:
+  - name: ""
+    email: ""
+---
+
+::: {.callout-note .callout-download collapse="true"}
+# Code for dataset loading, plotting defaults
+
+## Dataset loading
+We load the gesture dataframe.
+```{r} 
+library(cowplot)
+library(ggplot2)
+# Use this conditional approach:
+if (rstudioapi::isAvailable()) {
+  # Running in RStudio
+  current_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
+} else {
+  # Running outside RStudio (like command line quarto)
+  current_dir <- here::here()
+}
+
+# load full data
+fulldat <- read.csv(paste0(current_dir, "/Data_Output/gestures_long.csv"))
+fulldat$gesture_id <- as.factor(fulldat$gesture_id)
+fulldat$corpus <- as.factor(fulldat$corpus)
+fulldat$speaker <- as.factor(fulldat$speaker)
+fulldat$subtype <- as.factor(fulldat$subtype)
+fulldat$condition <- as.factor(fulldat$condition)
+
+# gesture category only
+gesdat <- subset(fulldat, condition == "gesture")
+gesdat$corpus <- droplevels(gesdat$corpus)
+gesdat$speaker <- droplevels(gesdat$speaker)
+gesdat$gesture_id <- droplevels(gesdat$gesture_id)
+
+# objman category only
+objman_dat <- subset(fulldat, condition == "objman")
+objman_dat$corpus <- droplevels(objman_dat$corpus)
+objman_dat$speaker <- droplevels(objman_dat$speaker)
+objman_dat$gesture_id <- droplevels(objman_dat$gesture_id)
+```
+
+## Code for plotting defaults 
+```{r}
+# Set some plotting defaults
+library(RColorBrewer)
+
+# Enhanced plotting theme
+my_theme <- function() {
+  theme_cowplot() +
+  theme(
+    text = element_text(size = 10, family = "sans"),
+    axis.text = element_text(size = 9, color = "grey20"),
+    axis.title = element_text(size = 11, face = "bold"),
+    plot.title = element_text(size = 12, face = "bold", hjust = 0),
+    panel.grid.major = element_line(color = "grey90", linewidth = 0.3),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    legend.text = element_text(size = 9),
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.position = "right",
+    legend.background = element_rect(fill = "white", color = "grey80"),
+    legend.key = element_rect(fill = "white", color = NA),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+}
+
+# colors - more contrastive
+corpus_colors <- c(
+  "ECOLANG" = "#E41A1C",
+  "GESres" = "#377EB8", 
+  "MULTISIMO" = "#4DAF4A",
+  "SAGA" = "#984EA3",
+  "SAGAplus" = "#FF7F00",
+  "ZHUBO" = "#F781BF"
+)
+```
+:::
+
+#### Models
+The models that we construct all share that they have as their response variable the log-transformed `subm_dur_ms` (submovement duration), and as a fixed effect predictor the log-transformed `n_submovements` (number of submovements). Since there are multiple observations of submovement durations per gesture, we include `gesture_id` as a random effect nested within `speaker` and `corpus` to account for this non-independence. We follow closely the modeling approach of [@wascherVocalEfficiencyCrows2025] as provided here [https://masonyoungblood.github.io/crow_efficiency/](https://masonyoungblood.github.io/crow_efficiency/).
+
+Below the blocks allows for inspection of the mixed regression models, their equations, plotting code.
+
+::: {.callout-note .callout-download collapse="true"}
+# Key mixed regression models for assessing Menzerath-Altman law
+```{r, warning=FALSE, message=FALSE}
+library(lme4)
+library(lmerTest)
+library(dplyr)
+library(equatiomatic)
+
+# remove any rows with single submovement gestures
+gesdat <- gesdat[gesdat$n_submovements > 1, ]
+
+# basemodel
+basemodel <- lmer(scale(log(subm_dur_ms)) ~ 1 + (1|corpus/speaker/gesture_id), data = gesdat)
+
+# Basic Menzerath model with corpus in random structure
+gesture_menz_model <- lmer(scale(log(subm_dur_ms)) ~ scale(log(n_submovements)) + (1|corpus/speaker/gesture_id), data = gesdat)
+
+# For LaTeX output
+equationmenz <- extract_eq(gesture_menz_model, use_coefs = TRUE)
+```
+:::
+
+::: {.callout-note .callout-download collapse="true"}
+# Equations of the models
+
+`r equationmenz`
+
+:::
+
+
+::: {.callout-note .callout-download collapse="true"}
+# Plotting code for Menzerath's law models
+```{r}
+library(ggplot2)
+library(cowplot)
+library(lmerTest)
+library(svglite)
+
+# create plots folder
+dir.create(paste0(current_dir, "/plots"), showWarnings = FALSE)
+
+# Extract fixed effects coefficients
+coef_menz <- fixef(gesture_menz_model)
+
+# get median submovement duration per gesture
+gesdat_summary <- gesdat %>%
+  group_by(gesture_id, n_submovements, corpus) %>%
+  summarise(subm_dur_median = median(subm_dur_ms), .groups = "drop")
+
+# scale using the full dataset parameters (as.numeric to avoid matrix)
+gesdat_summary$x_scaled <- as.numeric(scale(log(gesdat_summary$n_submovements)))
+gesdat_summary$y_scaled <- as.numeric(scale(log(gesdat_summary$subm_dur_median)))
+
+# Create prediction line using same scaling
+pred_x <- seq(min(gesdat_summary$x_scaled), max(gesdat_summary$x_scaled), length.out = 100)
+pred_y <- coef_menz[1] + coef_menz[2] * pred_x
+pred_line <- data.frame(x = pred_x, y = pred_y)
+
+# per-corpus regression lines
+corpus_lines <- gesdat_summary %>%
+  group_by(corpus) %>%
+  summarise(
+    intercept = coef(lm(y_scaled ~ x_scaled))[1],
+    slope = coef(lm(y_scaled ~ x_scaled))[2],
+    x_min = min(x_scaled),
+    x_max = max(x_scaled),
+    .groups = "drop"
+  ) %>%
+  rowwise() %>%
+  do({
+    x_seq <- seq(.$x_min, .$x_max, length.out = 50)
+    data.frame(corpus = .$corpus, x = x_seq, y = .$intercept + .$slope * x_seq)
+  })
+
+# main plot with all data
+p1 <- ggplot(gesdat_summary, aes(x = x_scaled, y = y_scaled, color = corpus)) +
+  geom_point(alpha = 0.5, size = 2) +
+  geom_line(data = corpus_lines, aes(x = x, y = y, color = corpus), linewidth = 0.8, alpha = 2) +
+  geom_line(data = pred_line, aes(x = x, y = y), color = "black", linewidth = 1.2, inherit.aes = FALSE, size = 2) +
+  annotate("text", x = Inf, y = Inf, 
+           label = sprintf("overall: y = %.3f + %.3fx", coef_menz[1], coef_menz[2]),
+           hjust = 1.1, vjust = 1.5, size = 2.5) +
+  labs(x = "Scaled log(Number of Submovements)", 
+       y = "Scaled log(Submovement Duration)",
+       title = "Menzerath's Law: All Corpora") +
+  scale_color_manual(values = corpus_colors) +
+  my_theme()
+
+# faceted plot per corpus
+p_facet <- ggplot(gesdat_summary, aes(x = x_scaled, y = y_scaled, color = corpus)) +
+  geom_point(alpha = 0.5, size = 2) +
+  geom_line(data = corpus_lines, aes(x = x, y = y, color = corpus), linewidth = 2) +
+  geom_line(data = pred_line, aes(x = x, y = y), color = "black", linewidth = 1, linetype = "dashed", inherit.aes = FALSE) +
+  facet_wrap(~ corpus, scales = "free") +
+  labs(x = "Scaled log(Number of Submovements)", 
+       y = "Scaled log(Submovement Duration)",
+       title = "Menzerath's Law: Per Corpus") +
+  scale_color_manual(values = corpus_colors, guide = "none") +
+  my_theme() +
+  theme(strip.background = element_rect(fill = "grey90"),
+        strip.text = element_text(face = "bold"))
+
+# combined plot
+p_combined <- plot_grid(p1, p_facet, ncol = 1, rel_widths = c(1, 1.5), labels = c("A", "B"))
+
+# save plots
+ggsave(paste0(current_dir, "/plots/menzerath_all_corpora.svg"), p1, width = 8, height = 6)
+ggsave(paste0(current_dir, "/plots/menzerath_per_corpus.svg"), p_facet, width = 12, height = 8)
+ggsave(paste0(current_dir, "/plots/menzerath_combined.svg"), p_combined, width = 16, height = 6)
+```
+:::
+
+# General pattern Menzerath's law in gestures
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(MuMIn)
+
+# Model comparison: base vs Menzerath model
+anova_base_menz <- anova(basemodel, gesture_menz_model)
+
+# Extract ANOVA stats
+anova_chisq <- round(anova_base_menz$Chisq[2], 2)
+anova_df <- anova_base_menz$Df[2]
+anova_p <- anova_base_menz$`Pr(>Chisq)`[2]
+anova_p_fmt <- ifelse(anova_p < 0.001, "< 0.001", sprintf("= %.3f", anova_p))
+
+# AIC comparison
+aic_base <- round(AIC(basemodel), 1)
+aic_menz <- round(AIC(gesture_menz_model), 1)
+delta_aic_base <- round(aic_menz - aic_base, 1)
+
+# R2 for transformed (log-log) vs non-transformed
+r2_trans <- r.squaredGLMM(gesture_menz_model)
+
+r2_trans_fixed <- sprintf("%.3f", r2_trans[1, "R2m"])
+r2_trans_total <- sprintf("%.3f", r2_trans[1, "R2c"])
+
+# Model comparison table
+model_comparison <- data.frame(
+  Comparison = c("Base vs. Menzerath"),
+  Chi_sq = anova_chisq,
+  df = anova_df,
+  p = anova_p_fmt,
+  AIC_base = aic_base,
+  AIC_model = aic_menz,
+  delta_AIC = delta_aic_base
+)
+
+# Get coefficient summary from the basic model
+sum_basic <- coef(summary(gesture_menz_model))
+
+# 95% CI for coefficients
+ci_menz <- confint(gesture_menz_model, method = "Wald")
+
+# Extract values for inline reporting
+menz_slope <- sprintf("%.3f", sum_basic[2, "Estimate"])
+menz_slope_se <- sprintf("%.3f", sum_basic[2, "Std. Error"])
+menz_slope_t <- sprintf("%.2f", sum_basic[2, "t value"])
+menz_slope_p <- ifelse(sum_basic[2, "Pr(>|t|)"] < 0.001, "< 0.001", 
+                       sprintf("= %.3f", sum_basic[2, "Pr(>|t|)"]))
+
+# Create basic Menzerath model coefficient table with CI
+menz_coef_table <- data.frame(
+  Parameter = c("Intercept", "log(Number of Submovements)"),
+  Estimate = c(sum_basic[1, "Estimate"], sum_basic[2, "Estimate"]),
+  SE = c(sum_basic[1, "Std. Error"], sum_basic[2, "Std. Error"]),
+  CI_low = c(ci_menz["(Intercept)", 1], ci_menz["scale(log(n_submovements))", 1]),
+  CI_high = c(ci_menz["(Intercept)", 2], ci_menz["scale(log(n_submovements))", 2]),
+  t_value = c(sum_basic[1, "t value"], sum_basic[2, "t value"]),
+  p_value = c(sum_basic[1, "Pr(>|t|)"], sum_basic[2, "Pr(>|t|)"])
+)
+
+# Format columns
+menz_coef_table$p_formatted <- ifelse(menz_coef_table$p_value < 0.001, "< 0.001",
+                                      sprintf("%.3f", menz_coef_table$p_value))
+menz_coef_table$Estimate_fmt <- sprintf("%.3f", menz_coef_table$Estimate)
+menz_coef_table$SE_fmt <- sprintf("%.3f", menz_coef_table$SE)
+menz_coef_table$CI_fmt <- sprintf("[%.3f, %.3f]", menz_coef_table$CI_low, menz_coef_table$CI_high)
+menz_coef_table$t_value_fmt <- sprintf("%.2f", menz_coef_table$t_value)
+```
+
+Adding bout length (number of submovements) as a predictor significantly improved model fit compared to the base model (χ² = `r anova_chisq`, df = `r anova_df`, p `r anova_p_fmt`; ΔAIC = `r delta_aic_base`).
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+model_comparison %>%
+  kable(format = "html",
+        caption = "Table: Model Comparison (Base vs. Menzerath)",
+        col.names = c("Comparison", "χ²", "df", "p", "AIC (base)", "AIC (model)", "ΔAIC"),
+        align = c("l", "r", "r", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE)
+```
+
+We assessed the overall relationship between number of submovements and submovement duration (β = `r menz_slope`, SE = `r menz_slope_se`, p `r menz_slope_p`). 
+```{r, echo=FALSE, fig.height = 16, fig.width = 10, fig.cap="Figure. Scaling relationship according to the linear mixed regression model. (A) All corpora combined with overall regression line (black) and per-corpus lines. (B) Faceted view per corpus with overall line (dashed) for reference."}
+p_combined
+```
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+menz_coef_table %>%
+  select(Parameter, Estimate_fmt, SE_fmt, CI_fmt, t_value_fmt, p_formatted) %>%
+  kable(format = "html", 
+        caption = "Table: Fixed Effects for Basic Menzerath Model",
+        col.names = c("Parameter", "Estimate", "SE", "95% CI", "t-value", "p"),
+        align = c("l", "r", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE)
+```
+
+# Per-corpus modeling, individual variability, and log-log vs. linear
+
+::: {.callout-note .callout-download collapse="true"}
+# Per-corpus model fitting
+```{r, warning=FALSE, message=FALSE}
+library(MuMIn)
+
+# function to fit models and extract stats for a corpus
+fit_corpus_model <- function(data, corpus_name) {
+  corpus_data <- data[data$corpus == corpus_name, ]
+  corpus_data$speaker <- droplevels(corpus_data$speaker)
+  corpus_data$gesture_id <- droplevels(corpus_data$gesture_id)
+  
+  n_gestures <- length(unique(corpus_data$gesture_id))
+  n_speakers <- length(unique(corpus_data$speaker))
+  
+  # different model structure depending on number of speakers
+  if (n_speakers > 1) {
+    mod_log <- lmer(scale(log(subm_dur_ms)) ~ scale(log(n_submovements)) + (1|speaker/gesture_id), 
+                    data = corpus_data, REML = FALSE)
+    mod_lin <- lmer(scale(subm_dur_ms) ~ scale(n_submovements) + (1|speaker/gesture_id), 
+                    data = corpus_data, REML = FALSE)
+    vc <- VarCorr(mod_log)
+    speaker_sd <- attr(vc$speaker, "stddev")[1]
+  } else {
+    mod_log <- lmer(scale(log(subm_dur_ms)) ~ scale(log(n_submovements)) + (1|gesture_id), 
+                    data = corpus_data, REML = FALSE)
+    mod_lin <- lmer(scale(subm_dur_ms) ~ scale(n_submovements) + (1|gesture_id), 
+                    data = corpus_data, REML = FALSE)
+    speaker_sd <- NA
+  }
+  
+  # extract stats
+  sum_mod <- summary(mod_log)
+  coefs <- coef(sum_mod)
+  ci <- confint(mod_log, parm = "scale(log(n_submovements))", method = "Wald")
+  
+  # R2
+  r2 <- r.squaredGLMM(mod_log)
+  
+  # AIC comparison
+  delta_aic <- AIC(mod_log) - AIC(mod_lin)
+  
+  data.frame(
+    Corpus = corpus_name,
+    N_gestures = n_gestures,
+    N_speakers = n_speakers,
+    beta = coefs[2, "Estimate"],
+    SE = coefs[2, "Std. Error"],
+    CI_low = ci[1, 1],
+    CI_high = ci[1, 2],
+    p = coefs[2, "Pr(>|t|)"],
+    Speaker_SD = speaker_sd,
+    R2_fixed = r2[1, "R2m"],
+    R2_total = r2[1, "R2c"],
+    delta_AIC = delta_aic
+  )
+}
+
+# fit for gesture category - now including ZHUBO
+corpora_gesture <- c("ECOLANG", "GESres", "MULTISIMO", "SAGA", "SAGAplus", "ZHUBO")
+corpus_results_gesture <- do.call(rbind, lapply(corpora_gesture, function(c) fit_corpus_model(gesdat, c)))
+
+
+# format table
+corpus_table_gesture <- corpus_results_gesture
+# remove row  names
+row.names(corpus_table_gesture) <- NULL
+corpus_table_gesture$beta_fmt <- sprintf("%.3f", corpus_table_gesture$beta)
+corpus_table_gesture$SE_fmt <- sprintf("%.3f", corpus_table_gesture$SE)
+corpus_table_gesture$CI_fmt <- sprintf("[%.3f, %.3f]", corpus_table_gesture$CI_low, corpus_table_gesture$CI_high)
+corpus_table_gesture$p_fmt <- ifelse(corpus_table_gesture$p < 0.001, "< 0.001", sprintf("%.3f", corpus_table_gesture$p))
+corpus_table_gesture$Speaker_SD_fmt <- sprintf("%.3f", corpus_table_gesture$Speaker_SD)
+corpus_table_gesture$R2_fixed_fmt <- sprintf("%.3f", corpus_table_gesture$R2_fixed)
+corpus_table_gesture$R2_total_fmt <- sprintf("%.3f", corpus_table_gesture$R2_total)
+corpus_table_gesture$delta_AIC_fmt <- sprintf("%.1f", corpus_table_gesture$delta_AIC)
+corpus_table_gesture$Speaker_SD_fmt <- ifelse(is.na(corpus_table_gesture$Speaker_SD), "—", sprintf("%.3f", corpus_table_gesture$Speaker_SD))
+```
+:::
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+corpus_table_gesture %>%
+  select(Corpus, N_gestures, N_speakers, beta_fmt, SE_fmt, CI_fmt, p_fmt, Speaker_SD_fmt, R2_fixed_fmt, R2_total_fmt, delta_AIC_fmt) %>%
+  kable(format = "html",
+        caption = "Table: Per-corpus Menzerath effects for gesture category",
+        col.names = c("Corpus", "N gestures", "N speakers", "beta", "SE", "95% CI", "p", "Speaker SD", "R2_fixed", "R2_total", "dAIC"),
+        align = c("l", "r", "r", "r", "r", "r", "r", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE) %>%
+  footnote(general = "dAIC = AIC_loglog - AIC_linear; negative values indicate log-log model is better fit")
+```
+
+# Confound Analysis: Object Manipulation
+
+To assess whether the Menzerath-Altman relationship is specific to communicative gestures, we repeat the analysis for object manipulation movements which were also annotated in the ECOLANG corpus. We should expect here that these movements follow communicative efficiency principles less (but they might be regulated by general efficiency principles).
+
+::: {.callout-note .callout-download collapse="true"}
+# Object manipulation analysis
+```{r, warning=FALSE, message=FALSE}
+# filter for n_submovements > 1
+objman_dat <- objman_dat[objman_dat$n_submovements > 1, ]
+
+# model for objman - only ECOLANG has data, so no corpus random effect
+objman_menz_model <- lmer(scale(log(subm_dur_ms)) ~ scale(log(n_submovements)) + (1|speaker/gesture_id), data = objman_dat)
+
+# coefficients
+coef_objman <- fixef(objman_menz_model)
+sum_objman <- coef(summary(objman_menz_model))
+
+# summary data
+objman_summary <- objman_dat %>%
+  group_by(gesture_id, n_submovements, corpus) %>%
+  summarise(subm_dur_median = median(subm_dur_ms), .groups = "drop")
+
+objman_summary$x_scaled <- as.numeric(scale(log(objman_summary$n_submovements)))
+objman_summary$y_scaled <- as.numeric(scale(log(objman_summary$subm_dur_median)))
+
+# prediction line
+pred_x_obj <- seq(min(objman_summary$x_scaled), max(objman_summary$x_scaled), length.out = 100)
+pred_y_obj <- coef_objman[1] + coef_objman[2] * pred_x_obj
+pred_line_obj <- data.frame(x = pred_x_obj, y = pred_y_obj)
+
+# per-corpus lines for objman (only ECOLANG)
+corpus_lines_obj <- objman_summary %>%
+  group_by(corpus) %>%
+  summarise(
+    intercept = coef(lm(y_scaled ~ x_scaled))[1],
+    slope = coef(lm(y_scaled ~ x_scaled))[2],
+    x_min = min(x_scaled),
+    x_max = max(x_scaled),
+    .groups = "drop"
+  ) %>%
+  rowwise() %>%
+  do({
+    x_seq <- seq(.$x_min, .$x_max, length.out = 50)
+    data.frame(corpus = .$corpus, x = x_seq, y = .$intercept + .$slope * x_seq)
+  })
+
+# plot
+p_objman <- ggplot(objman_summary, aes(x = x_scaled, y = y_scaled, color = corpus)) +
+  geom_point(alpha = 0.5, size = 2) +
+  geom_line(data = corpus_lines_obj, aes(x = x, y = y, color = corpus), linewidth = 2, alpha = 0.8) +
+  geom_line(data = pred_line_obj, aes(x = x, y = y), color = "black", linewidth = 2, inherit.aes = FALSE) +
+  annotate("text", x = Inf, y = Inf, 
+           label = sprintf("overall: y = %.3f + %.3fx", coef_objman[1], coef_objman[2]),
+           hjust = 1.1, vjust = 1.5, size = 2.5) +
+  labs(x = "Scaled log(Number of Submovements)", 
+       y = "Scaled log(Submovement Duration)",
+       title = "Menzerath's Law: Object Manipulation") +
+  scale_color_manual(values = corpus_colors) +
+  my_theme()
+
+# save
+ggsave(paste0(current_dir, "/plots/menzerath_objman.svg"), p_objman, width = 8, height = 6)
+```
+:::
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# reporting values
+objman_slope <- sprintf("%.3f", sum_objman[2, "Estimate"])
+objman_slope_se <- sprintf("%.3f", sum_objman[2, "Std. Error"])
+objman_slope_p <- ifelse(sum_objman[2, "Pr(>|t|)"] < 0.001, "< 0.001", 
+                         sprintf("= %.3f", sum_objman[2, "Pr(>|t|)"]))
+
+objman_coef_table <- data.frame(
+  Parameter = c("Intercept", "log(Number of Submovements)"),
+  Estimate = c(sum_objman[1, "Estimate"], sum_objman[2, "Estimate"]),
+  SE = c(sum_objman[1, "Std. Error"], sum_objman[2, "Std. Error"]),
+  t_value = c(sum_objman[1, "t value"], sum_objman[2, "t value"]),
+  p_value = c(sum_objman[1, "Pr(>|t|)"], sum_objman[2, "Pr(>|t|)"])
+)
+
+objman_coef_table$p_formatted <- ifelse(objman_coef_table$p_value < 0.001, "< 0.001",
+                                        sprintf("%.3f", objman_coef_table$p_value))
+objman_coef_table$Estimate <- sprintf("%.3f", objman_coef_table$Estimate)
+objman_coef_table$SE <- sprintf("%.3f", objman_coef_table$SE)
+objman_coef_table$t_value <- sprintf("%.2f", objman_coef_table$t_value)
+```
+
+For object manipulation movements, we did not obtain reliable results (beta = `r objman_slope`, SE = `r objman_slope_se`, p `r objman_slope_p`), which is contrast to the previous analysis, also specifically in contrast to communicative gestures produced in the same ECOLANG corpus.
+
+```{r, echo=FALSE, fig.height = 6, fig.width = 8, fig.cap="Figure. Menzerath's law relationship for object manipulation movements."}
+p_objman
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+objman_coef_table %>%
+  select(Parameter, Estimate, SE, t_value, p_formatted) %>%
+  kable(format = "html", 
+        caption = "Table: Fixed Effects for Object Manipulation Menzerath Model",
+        col.names = c("Parameter", "Estimate", "SE", "t-value", "p"),
+        align = c("l", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE)
+```
+
+::: {.callout-note .callout-download collapse="true"}
+# Object manipulation per-corpus model fitting
+```{r, warning=FALSE, message=FALSE}
+# fit for objman - only ECOLANG has data
+corpus_results_objman <- fit_corpus_model(objman_dat, "ECOLANG")
+
+corpus_table_objman <- corpus_results_objman
+corpus_table_objman$beta_fmt <- sprintf("%.3f", corpus_table_objman$beta)
+corpus_table_objman$SE_fmt <- sprintf("%.3f", corpus_table_objman$SE)
+corpus_table_objman$CI_fmt <- sprintf("[%.3f, %.3f]", corpus_table_objman$CI_low, corpus_table_objman$CI_high)
+corpus_table_objman$p_fmt <- ifelse(corpus_table_objman$p < 0.001, "< 0.001", sprintf("%.3f", corpus_table_objman$p))
+corpus_table_objman$Speaker_SD_fmt <- sprintf("%.3f", corpus_table_objman$Speaker_SD)
+corpus_table_objman$R2_fixed_fmt <- sprintf("%.3f", corpus_table_objman$R2_fixed)
+corpus_table_objman$R2_total_fmt <- sprintf("%.3f", corpus_table_objman$R2_total)
+corpus_table_objman$delta_AIC_fmt <- sprintf("%.1f", corpus_table_objman$delta_AIC)
+```
+:::
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+corpus_table_objman %>%
+  select(Corpus, N_gestures, N_speakers, beta_fmt, SE_fmt, CI_fmt, p_fmt, Speaker_SD_fmt, R2_fixed_fmt, R2_total_fmt, delta_AIC_fmt) %>%
+  kable(format = "html",
+        caption = "Table: Per-corpus Menzerath effects for object manipulation category",
+        col.names = c("Corpus", "N gestures", "N speakers", "beta", "SE", "95% CI", "p", "Speaker SD", "R2_fixed", "R2_total", "dAIC"),
+        align = c("l", "r", "r", "r", "r", "r", "r", "r", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE) %>%
+  footnote(general = "dAIC = AIC_loglog - AIC_linear; negative values indicate log-log model is better fit")
+```
+

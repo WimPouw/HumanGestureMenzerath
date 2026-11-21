@@ -1,0 +1,275 @@
+---
+title: "Human Gestures Are Efficient"
+subtitle: "Feature processing: motion tracking and masked animations"
+author:
+  - name: ""
+    affiliation: ""
+  - name: ""
+    affiliation: ""
+contact:
+  - name: ""
+    email: ""
+resources:
+  - "animations/*.mp4"
+---
+
+Here we show the code that was used for the motion tracking and for creating the masked animations. This code is not rerun here. Below the code we show example animations for each dataset, and the first rows of the time series of one example.
+
+```{r, include=FALSE}
+# Use this conditional approach:
+if (rstudioapi::isAvailable()) {
+  # Running in RStudio
+  current_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
+} else {
+  # Running outside RStudio (like command line quarto)
+  current_dir <- here::here()
+}
+
+feature_dir <- paste0(current_dir, "/Code_Processing/FeatureGeneration")
+input_dir <- paste0(current_dir, "/Data_Input")
+anim_dir <- paste0(current_dir, "/animations")   # example animations that are shown on this page
+
+python_exe <- Sys.which("python")   # change this if your python lives somewhere else
+if (python_exe == "") python_exe <- Sys.which("python3")
+
+# shows a code file in a code block
+show_code <- function(file, lang = "python") {
+  cat(paste0("```", lang, "\n"))
+  cat(readLines(file, warn = FALSE), sep = "\n")
+  cat("\n```\n")
+}
+```
+
+# Code
+
+::: {.callout-note .callout-download collapse="true"}
+# Python code: tracking.py
+```{r, echo=FALSE, results='asis'}
+show_code(paste0(feature_dir, "/tracking.py"))
+```
+:::
+
+::: {.callout-note .callout-download collapse="true"}
+# Python code: animation_creation.py
+```{r, echo=FALSE, results='asis'}
+show_code(paste0(feature_dir, "/animation_creation.py"))
+```
+:::
+
+::: {.callout-note .callout-download collapse="true"}
+# Python packages: requirements.txt
+```{r, echo=FALSE, results='asis'}
+show_code(paste0(feature_dir, "/requirements.txt"), lang = "default")
+```
+:::
+
+# Example animations
+
+::: {.callout-note .callout-download collapse="true"}
+# Code for selecting the example animations
+```{r, warning=FALSE, message=FALSE}
+n_examples <- 3   # number of example animations per dataset
+n_columns <- 2    # number of animations next to each other (fewer = bigger, 1 = full width)
+datasets <- c("ECOLANG", "GESres", "MULTISIMO", "SAGA", "SAGAplus", "ZHUBO")
+
+dir.create(anim_dir, showWarnings = FALSE)
+set.seed(1)
+
+# the original animations are not encoded in a format that browsers can play,
+# so we re-encode the examples to H.264 (files ending on _h264.mp4)
+# we use ffmpeg when it is installed, and otherwise the one of the python package imageio-ffmpeg
+find_ffmpeg <- function() {
+  exe <- Sys.which("ffmpeg")
+  if (exe == "") {
+    exe <- tryCatch(system2(python_exe, c("-c", shQuote("import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())")),
+                            stdout = TRUE, stderr = FALSE)[1], error = function(e) "", warning = function(w) "")
+  }
+  if (is.na(exe) || exe == "") stop("ffmpeg not found: install ffmpeg, or run 'pip install imageio-ffmpeg'")
+  exe
+}
+
+encode_video <- function(from, to) {
+  # yuv420p needs an even width and height, so we pad one pixel when needed
+  status <- system2(find_ffmpeg(), c("-y", "-loglevel", "error", "-i", shQuote(from),
+                                     "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                                     "-vf", shQuote("pad=ceil(iw/2)*2:ceil(ih/2)*2"),
+                                     "-movflags", "+faststart", "-an", shQuote(to)))
+  if (status != 0 || !file.exists(to)) stop(paste("could not re-encode", from))
+}
+
+# object manipulations are recognized by their file name
+is_objman <- function(files) grepl("_gesture_objman_", files)
+
+# returns the example animations of a dataset
+# we pick them once from Data_Input and save a re-encoded copy in the animations folder,
+# after that the copies are used (so Data_Input is not needed to render this page)
+get_examples <- function(dataset, objman = FALSE) {
+  select <- function(files) {
+    files <- files[grepl(paste0("^", dataset, "_"), files) & is_objman(files) == objman]
+    files[!grepl("_gesture_nogesture_", files)]
+  }
+  folder <- paste0(input_dir, ifelse(objman, "/Objman", "/Gesture"))
+  
+  # examples that were copied before without re-encoding: we keep the selection and re-encode them
+  old <- select(list.files(anim_dir, pattern = "_skeleton\\.mp4$"))
+  for (f in old) {
+    encode_video(paste0(anim_dir, "/", f), paste0(anim_dir, "/", sub("\\.mp4$", "_h264.mp4", f)))
+    file.remove(paste0(anim_dir, "/", f))
+  }
+  
+  # new examples when there are not enough yet
+  examples <- select(list.files(anim_dir, pattern = "_h264\\.mp4$"))
+  if (length(examples) < n_examples) {
+    candidates <- select(list.files(folder, pattern = "_skeleton\\.mp4$"))
+    candidates <- setdiff(candidates, sub("_h264\\.mp4$", ".mp4", examples))
+    new <- sample(candidates, min(n_examples - length(examples), length(candidates)))
+    for (f in new) {
+      encode_video(paste0(folder, "/", f), paste0(anim_dir, "/", sub("\\.mp4$", "_h264.mp4", f)))
+    }
+    examples <- select(list.files(anim_dir, pattern = "_h264\\.mp4$"))
+  }
+  sort(examples)[seq_len(min(n_examples, length(examples)))]
+}
+
+# shows the animations next to each other
+show_examples <- function(examples) {
+  cat("```{=html}\n")
+  cat(paste0('<div style="display:grid; grid-template-columns:repeat(', n_columns, ', 1fr); gap:10px;">\n'))
+  for (f in examples) {
+    cat('<figure style="margin:0;">\n')
+    cat(paste0('<video controls loop muted playsinline preload="metadata" style="width:100%;">',
+               '<source src="animations/', f, '" type="video/mp4"></video>\n'))
+    cat(paste0('<figcaption>', sub("_skeleton_h264\\.mp4$", "", f), '</figcaption>\n'))
+    cat('</figure>\n')
+  }
+  cat('</div>\n')
+  cat("```\n\n")
+}
+```
+:::
+
+```{r, echo=FALSE, results='asis'}
+for (dataset in datasets) {
+  cat(paste0("\n## ", dataset, "\n\n"))
+  show_examples(get_examples(dataset))
+}
+
+cat("\n## ECOLANG (object manipulation)\n\n")
+show_examples(get_examples("ECOLANG", objman = TRUE))
+```
+
+# Example time series
+
+Each animation comes with a skeleton file (.npz) with the time series of the Mediapipe world landmarks (in meters), which is the input for the preprocessing. Below we show which arrays are in such a file, and the first rows for the wrists and index fingers of the first ECOLANG example.
+
+::: {.callout-note .callout-download collapse="true"}
+# Code for reading the example time series
+```{r, warning=FALSE, message=FALSE}
+example_npz <- paste0(input_dir, "/Gesture/", sub("_h264\\.mp4$", ".npz", get_examples("ECOLANG")[1]))
+head_file <- paste0(anim_dir, "/example_timeseries_head.txt")
+
+# small python script that prints the content of a skeleton file
+py_code <- '
+import sys
+import numpy as np
+import pandas as pd
+
+data = np.load(sys.argv[1], allow_pickle=True)
+
+# arrays in the file
+print("file:", sys.argv[2])
+for k in data.files:
+    print("  array:", k, "| shape:", data[k].shape, "| type:", data[k].dtype)
+
+# world landmarks (frames x 92): 23 upper body landmarks, each with x, y, z, visibility
+world = next(data[k] for k in data.files if data[k].ndim == 2 and data[k].shape[1] == 92)
+landmarks = ["nose", "left_eye_inner", "left_eye", "left_eye_outer", "right_eye_inner", "right_eye",
+             "right_eye_outer", "left_ear", "right_ear", "mouth_left", "mouth_right",
+             "left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_wrist", "right_wrist",
+             "left_pinky", "right_pinky", "left_index", "right_index", "left_thumb", "right_thumb"]
+cols = [l + "_" + a for l in landmarks for a in ["x", "y", "z", "vis"]]
+ts = pd.DataFrame(world, columns=cols)
+if "timestamps" in data.files:
+    ts.insert(0, "time", data["timestamps"])
+
+# head of the time series for the wrists and index fingers
+show = [c for c in ts.columns if c == "time" or (c.split("_")[1] in ["wrist", "index"] and not c.endswith("vis"))]
+pd.set_option("display.width", 250)
+pd.set_option("display.max_columns", None)
+print()
+print(ts[show].head(10).round(3).to_string())
+'
+
+# we only run python when the output is not there yet
+if (!file.exists(head_file)) {
+  py_file <- tempfile(fileext = ".py")
+  writeLines(py_code, py_file)
+  out <- system2(python_exe, c(shQuote(py_file), shQuote(example_npz), shQuote(basename(example_npz))), stdout = TRUE)
+  writeLines(out, head_file)
+}
+```
+:::
+
+```{r, echo=FALSE, comment=""}
+cat(readLines(head_file), sep = "\n")
+```
+
+# Visibility of the index fingers
+
+The table below gives the average Mediapipe visibility score of the left and right index finger per dataset. The score is first averaged over the frames of each event, and then over the events of a dataset.
+
+::: {.callout-note .callout-download collapse="true"}
+# Code for the visibility scores
+```{r, warning=FALSE, message=FALSE}
+library(knitr)
+library(kableExtra)
+
+vis_file <- paste0(anim_dir, "/visibility_per_dataset.csv")
+
+# small python script that reads all skeleton files and averages the visibility of the index fingers
+py_code_vis <- '
+import sys, os, glob
+import numpy as np
+import pandas as pd
+
+rows = []
+for folder, condition in [("Gesture", "gesture"), ("Objman", "objman")]:
+    for f in sorted(glob.glob(os.path.join(sys.argv[1], folder, "*_skeleton.npz"))):
+        data = np.load(f, allow_pickle=True)
+        world = next((data[k] for k in data.files if data[k].ndim == 2 and data[k].shape[1] == 92), None)
+        if world is None:
+            continue
+        # visibility is the 4th value of each landmark (left index = landmark 19, right index = landmark 20)
+        rows.append({"dataset": os.path.basename(f).split("_")[0], "condition": condition,
+                     "left_index": world[:, 19*4+3].mean(), "right_index": world[:, 20*4+3].mean()})
+
+df = pd.DataFrame(rows)
+out = df.groupby(["dataset", "condition"]).agg(
+    n_events=("left_index", "size"),
+    left_index_mean=("left_index", "mean"), left_index_sd=("left_index", "std"),
+    right_index_mean=("right_index", "mean"), right_index_sd=("right_index", "std")).reset_index()
+out.to_csv(sys.argv[2], index=False)
+'
+
+# we only run python when the output is not there yet (this reads all skeleton files)
+if (!file.exists(vis_file)) {
+  py_file <- tempfile(fileext = ".py")
+  writeLines(py_code_vis, py_file)
+  system2(python_exe, c(shQuote(py_file), shQuote(input_dir), shQuote(vis_file)))
+}
+visibility <- read.csv(vis_file)
+```
+:::
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+visibility$left_index <- sprintf("%.3f (%.3f)", visibility$left_index_mean, visibility$left_index_sd)
+visibility$right_index <- sprintf("%.3f (%.3f)", visibility$right_index_mean, visibility$right_index_sd)
+
+visibility[, c("dataset", "condition", "n_events", "left_index", "right_index")] %>%
+  kable(format = "html", row.names = FALSE,
+        caption = "Table: Average visibility score of the index fingers per dataset, mean (SD over events)",
+        col.names = c("Dataset", "Condition", "N events", "Left index", "Right index"),
+        align = c("l", "l", "r", "r", "r")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE)
+```

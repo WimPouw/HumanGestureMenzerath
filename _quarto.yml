@@ -1,19 +1,40 @@
 project:
   output-dir: docs
   type: website
+  # pages are rendered in this order (preprocessing has to run before the analyses)
+  # other files, like those in old_scripts, are not rendered
+  render:
+    - index.qmd
+    - feature_processing.qmd
+    - preprocessing.qmd
+    - main_analysis_1.qmd
+    - main_analysis_2.qmd
+    - null_simulation.qmd
 
 website:
   sidebar:
     style: "floating"
     search: false
     contents:
-      - text: "Report overview"
-        href: index.qmd
+      - section: "Feature processing"
+        contents:
+          - text: "Motion tracking and animations"
+            href: feature_processing.qmd
+      - section: "Preprocessing"
+        contents:
+          - text: "Peak extraction (method 1 and 2)"
+            href: preprocessing.qmd
       - section: "Mixed Linear Regression analysis"
         contents:
-          - text: "Basic Menzerath-Altman model"
+          - text: "Menzerath-Altmann model (peak method 1)"
             href: main_analysis_1.qmd
-            
+          - text: "Menzerath-Altmann model (peak method 2)"
+            href: main_analysis_2.qmd
+      - section: "Null model"
+        contents:
+          - text: "Null model on simulated data"
+            href: null_simulation.qmd
+
 metadata:
   crossref:
     chapters: true
@@ -32,6 +53,8 @@ format:
     number-sections: false
     code-fold: true
     code-tools: true
+    fig-dpi: 300
+    fig-format: png
     css: |
       .quarto-container {
         max-width: 8000px !important;

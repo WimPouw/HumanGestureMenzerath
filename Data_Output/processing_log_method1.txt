@@ -1,0 +1,39 @@
+Found 8539 files
+
+Duplicates removed (same skeleton data): 71
+removed
+ECOLANG     45
+SAGA        23
+SAGAplus     3
+
+Flat: 8454 gestures
+Long: 26799 submovements
+
+Corpus counts:
+corpus
+ECOLANG      4874
+MULTISIMO    1188
+GESres       1029
+SAGAplus      672
+SAGA          605
+ZHUBO          86
+Name: count, dtype: int64
+
+Condition counts:
+condition
+gesture    7274
+objman     1180
+Name: count, dtype: int64
+
+Single units (excluded in analysis): 2013
+
+Speakers and gestures per corpus:
+  n speakers = 15, n gestures = 3694 (2859 in analysis), ECOLANG [gesture]
+  n speakers = 7, n gestures = 1029 (845 in analysis), GESres [gesture]
+  n speakers = 18, n gestures = 1188 (907 in analysis), MULTISIMO [gesture]
+  n speakers = 4, n gestures = 605 (476 in analysis), SAGA [gesture]
+  n speakers = 12, n gestures = 672 (179 in analysis), SAGAplus [gesture]
+  n speakers = 1, n gestures = 86 (76 in analysis), ZHUBO [gesture]
+  n speakers = 15, n gestures = 1180 (1099 in analysis), ECOLANG [objman]
+  total [gesture]: n gestures = 7274 (5342 in analysis)
+  total [objman]: n gestures = 1180 (1099 in analysis)

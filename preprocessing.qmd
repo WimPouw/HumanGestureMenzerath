@@ -1,0 +1,157 @@
+---
+title: "Human Gestures Are Efficient"
+subtitle: "Preprocessing: submovement extraction with peak method 1 and peak method 2"
+author:
+  - name: ""
+    affiliation: ""
+  - name: ""
+    affiliation: ""
+contact:
+  - name: ""
+    email: ""
+---
+
+Here we run the two Python scripts that turn the skeleton files (Mediapipe world landmarks, 25 fps) into the submovement datasets that are analyzed on the next pages. Both scripts do the same thing, and only differ in how a speed peak is defined.
+
+- **Peak method 1**: a peak is a local maximum in the index finger speed of the dominant hand that is above 0.15 m/s (15 cm/s).
+- **Peak method 2**: a peak is a local maximum that is above 10% of the maximum speed of that gesture.
+
+In both methods the positions are smoothed with a Gaussian filter (SD = 2 frames, 80 ms), the speed is smoothed once more, and peaks need to be at least 4 frames (160 ms) apart. A submovement is the interval between two consecutive peaks, so the number of submovements is the number of peaks minus one. Gestures with fewer than two peaks have no interval, they are flagged as `single_unit` and are excluded in the analyses.
+
+::: {.callout-note .callout-download collapse="true"}
+# Code for running the Python scripts
+```{r, warning=FALSE, message=FALSE}
+# Use this conditional approach:
+if (rstudioapi::isAvailable()) {
+  # Running in RStudio
+  current_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
+} else {
+  # Running outside RStudio (like command line quarto)
+  current_dir <- here::here()
+}
+
+# settings
+rerun <- FALSE                      # set to TRUE to force a rerun of both scripts
+python_exe <- Sys.which("python")   # change this if your python lives somewhere else
+if (python_exe == "") python_exe <- Sys.which("python3")
+
+script_dir <- paste0(current_dir, "/Code_Processing/PeakExtractionCode")
+output_dir <- paste0(current_dir, "/Data_Output")
+
+# runs one script and returns what it printed
+run_method <- function(method) {
+  script  <- paste0("processingGestures_method", method, ".py")
+  outfile <- paste0(output_dir, "/gestures_long_method", method, ".csv")
+  flatfile <- paste0(output_dir, "/gestures_flat_method", method, ".csv")
+  logfile <- paste0(output_dir, "/processing_log_method", method, ".txt")
+
+  # we only run when the output is missing or older than the script
+  stale <- !file.exists(outfile) || !file.exists(flatfile) || !file.exists(logfile) ||
+    file.mtime(outfile) < file.mtime(paste0(script_dir, "/", script))
+
+  if (rerun || stale) {
+    # the scripts use relative paths (../../Data_Input), so we run them from their own folder
+    old_dir <- setwd(script_dir)
+    on.exit(setwd(old_dir))
+    errfile <- tempfile()
+    log <- system2(python_exe, script, stdout = TRUE, stderr = errfile)
+    if (!is.null(attr(log, "status"))) {
+      stop(paste(c(paste(script, "failed:"), tail(readLines(errfile), 20)), collapse = "\n"))
+    }
+    # the script should have written both datasets
+    if (!file.exists(outfile) || !file.exists(flatfile)) {
+      stop(paste(c(paste0(script, " ran, but did not write gestures_flat_method", method, ".csv and gestures_long_method", method, 
+                          ".csv in Data_Output. Is this the latest version of the script? Its output was:"), 
+                   tail(log, 15)), collapse = "\n"))
+    }
+    writeLines(log, logfile)
+  }
+  readLines(logfile)
+}
+
+log_method1 <- run_method(1)
+log_method2 <- run_method(2)
+```
+:::
+
+# Peak method 1 (absolute threshold)
+
+::: {.callout-note .callout-download collapse="true"}
+# Python code: processingGestures_method1.py
+```{r, echo=FALSE, results='asis'}
+cat("```python\n")
+cat(readLines(paste0(script_dir, "/processingGestures_method1.py")), sep = "\n")
+cat("\n```\n")
+```
+:::
+
+::: {.callout-note .callout-download collapse="true"}
+# Output of the script
+```{r, echo=FALSE, comment=""}
+cat(log_method1, sep = "\n")
+```
+:::
+
+# Peak method 2 (10% of max speed)
+
+::: {.callout-note .callout-download collapse="true"}
+# Python code: processingGestures_method2.py
+```{r, echo=FALSE, results='asis'}
+cat("```python\n")
+cat(readLines(paste0(script_dir, "/processingGestures_method2.py")), sep = "\n")
+cat("\n```\n")
+```
+:::
+
+::: {.callout-note .callout-download collapse="true"}
+# Output of the script
+```{r, echo=FALSE, comment=""}
+cat(log_method2, sep = "\n")
+```
+:::
+
+# Overview of the resulting datasets
+
+The table below gives per corpus and condition the number of events, how many of those are single units (fewer than two peaks), and how many remain for the analysis. Note that peak method 2 has no absolute threshold, so almost every event has two or more peaks.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+# one row per event
+flat1 <- read.csv(paste0(output_dir, "/gestures_flat_method1.csv"))
+flat2 <- read.csv(paste0(output_dir, "/gestures_flat_method2.csv"))
+
+count_events <- function(flat) {
+  flat %>%
+    group_by(corpus, condition) %>%
+    summarise(n_speakers = n_distinct(speaker),
+              n_events = n(),
+              n_single = sum(single_unit),
+              n_analysis = sum(single_unit == 0),
+              median_subm = median(n_submovements[single_unit == 0]),
+              .groups = "drop")
+}
+
+overview <- full_join(count_events(flat1), count_events(flat2),
+                      by = c("corpus", "condition", "n_speakers", "n_events"),
+                      suffix = c("_m1", "_m2"))
+
+overview %>%
+  kable(format = "html",
+        caption = "Table: Number of events per corpus and condition for both peak methods",
+        col.names = c("Corpus", "Condition", "N speakers", "N events",
+                      "Single units", "In analysis", "Median N submovements",
+                      "Single units", "In analysis", "Median N submovements"),
+        align = c("l", "l", rep("r", 8))) %>%
+  add_header_above(c(" " = 4, "Peak method 1" = 3, "Peak method 2" = 3)) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                full_width = FALSE)
+
+# gesture ids are the random intercepts, so they should be unique within a condition
+n_dup1 <- sum(duplicated(flat1[, c("condition", "gesture_id")]))
+n_dup2 <- sum(duplicated(flat2[, c("condition", "gesture_id")]))
+```
+
+In total there are `r sum(flat1$condition == "gesture")` gestures and `r sum(flat1$condition == "objman")` object manipulations. After excluding single units we analyze `r sum(flat1$condition == "gesture" & flat1$single_unit == 0)` gestures with peak method 1 and `r sum(flat2$condition == "gesture" & flat2$single_unit == 0)` gestures with peak method 2. The number of duplicated gesture ids within a condition is `r n_dup1` (this should be 0).

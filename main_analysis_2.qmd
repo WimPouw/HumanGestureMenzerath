@@ -1,0 +1,20 @@
+---
+title: "Human Gestures Are Efficient"
+subtitle: "Mixed Linear Regression Models: Basic Menzerath-Altmann model (peak method 2)"
+author:
+  - name: ""
+    affiliation: ""
+  - name: ""
+    affiliation: ""
+contact:
+  - name: ""
+    email: ""
+---
+
+```{r, include=FALSE}
+# which peak method is analyzed on this page (1 = above 0.15 m/s, 2 = above 10% of max speed)
+# the analysis itself is shared between both methods and lives in _analysis_body.qmd
+method <- 2
+```
+
+{{< include _analysis_body.qmd >}}
