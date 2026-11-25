@@ -811,3 +811,27 @@ type_table %>%
                 full_width = FALSE) %>%
   footnote(general = "beta = standardized within-speaker slope; Exponent = unscaled log-log slope")
 ```
+
+Save the models for report
+
+```{r, warning=FALSE, message=FALSE}
+# save all models (and what is needed to report them) in one file
+model_dir <- paste0(current_dir, "/models")
+dir.create(model_dir, showWarnings = FALSE)
+
+saveRDS(list(
+  basemodel          = basemodel,
+  gesture_menz_model = gesture_menz_model,
+  mod_log            = mod_log,
+  mod_lin            = mod_lin,
+  corpus_slope_model = corpus_slope_model,
+  objman_menz_model  = objman_menz_model,
+  condition_model    = condition_model,
+  type_base_model    = type_base_model,
+  type_slope_model   = type_slope_model,
+  m_g = m_g, m_o = m_o,
+  null_g = null_g, null_o = null_o, res = res,
+  sc_ges = sc_ges, sc_obj = sc_obj, sc_type = sc_type
+), paste0(model_dir, "/menzerath_models_method", method, ".rds"))
+```
+

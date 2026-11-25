@@ -1,0 +1,227 @@
+## Main Text
+Quantitative linguistics has led to the discovery that language is subject to recurrent patterns that can be formulated in the form of statistical laws. One of them is Menzerath’s law [@altmannProlegomenaMenzerathsLaw1980; @menzerathArchitektonikDeutschenWortschatzes1954], which describes the tendency for hierarchically organized linguistic units and their sub-units to show a particular scaling relation. Specifically, a unit (e.g., a word) made of more sub-units (e.g., syllables) tends to have shorter subunits: the larger the whole, the smaller its parts. Menzerath’s law has been frequently described in written and spoken language [@debowskiMenzerathsLawSmallest2011; @milickaMenzerathsLawWhole2014], and also reported in Czech sign language [@andresFractalAnalysisSign2021]. Menzerath’s law (ML) is thereby on par with Zipf’s law, characterizing the relationship between words’ length and frequency, similarly established in many languages [@jayaramRelationshipWordLength2009; @sigurdWordLengthSentence2004].
+
+What is the origin of Menzerath’s law? It has been shown that the scaling relations are more robust when the linguistic units' measures are based on physically produced speech units (phoneme, word, and breath group durations) rather than on symbol counts of text transcriptions [@torrePhysicalOriginLinguistic2019]. This underlines that ML might arise out of physical constraints. Candidate mechanisms include effort minimization under limited metabolic resources, increased coarticulation due to anticipatory planning, or the limits that the lung volume places on expiratory drive when producing longer speech units.
+
+Importantly, ML is not a phenomenon unique to spoken languages, nor even unique to humans. It has been observed in the abbreviating strokes of Chinese written characters [@shiMenzerathAltmannLawPhysical2024], but also in a wide variety of non-human animal vocalizations [@wascherVocalEfficiencyCrows2025; @youngbloodLanguagelikeEfficiencyWhale2025], and play gestures in chimpanzee communication [@heesenLinguisticLawsChimpanzee2019]. In fact, “linguistic” laws can show up in biological systems, such as genes [@liMenzerathsLawGeneexon2012] and proteins [@matlachSecondaryStructuresProteins2022]. The widespread nature of these laws thus suggests some degree of universality or modality-shared processes, a general biological principle of (bio)semiotic processes [@sempleLinguisticLawsBiology2022] and possibly other evolutionary processes. 
+
+A challenge in research ML is to ensure that statistical artifacts [@torreCanMenzerathsLaw2021; @wascherVocalEfficiencyCrows2025], such as regression to the mean, can be excluded, and to show where ML breaks down or does not hold. Despite this diversity of processes that generate ML, it is striking that one of the most dominant and universal modes of communication in humans, namely spontaneous co-speech gesture, has not been investigated for the presence of similar physical constraints. To assess whether we can add human co-speech gesture to the collection of ML-abiding communicative actions, we investigated the presence of the ML in co-speech gestures with a curated open science corpus of thousands of gestures, occurring in dyadic interactions across four spoken languages (French, English, Chinese, German), and over 50 speakers. This dataset constitutes one of the largest gesture-annotated corpora currently analyzed in this field, befitting the inferential power needed to argue for the presence of statistical “laws”.
+
+## Methods and results
+The combined dataset has been built using existing datasets, namely ECOLANG [@guECOLANGMultimodalCorpus2025], MULTISIMO [@koutsombogeraModelingCollaborativeMultimodal2018], GESres [@henselRichlyAnnotatedDataset2025], SAGA [@luckingBielefeldSpeechGesture2010], SAGAplus [@kucherenkoSaGASpeechGestureDataset2022], ZHUBO [@baoEditableCoSpeechGesture2024]. Taken together, we analyzed 7274 gestures (5342 gestures after excluding gestures with only one submovement or fewer than two speed peaks; method 1, see below). Note that we also performed a gesture type sub-analysis, for which we recoded the labels of the corpora that had coded for types (all but ZHUBO) to four general types, taking the first label when labels were combined: beat (n = 724), representational (iconic, metaphoric; n = 2343), pointing (deictic; n = 733), and pragmatic (pragmatic, discourse; n = 1108). Gestures without a fitting label (emblems, symbolic gestures, and gestures without a type label, including all of ZHUBO; n = 434) were excluded from this sub-analysis. 
+
+A masked version of this gesture dataset is already open under a CC-BY-NC-SA 4.0 license. Our version of this dataset is on [Github](https://github.com/WimPouw/HumanGestureMenzerath) and checked for duplicates. It does not include the TEDM3D dataset as this was very challenging to track [see @shaikhEnvisionGestureChallenge2026]. We also included 1180 manual events (1099 after exclusions) that are not communicative gestures but object manipulations, which can serve as a check whether scaling laws exist in manual movements per se or are additionally affected by interactions with rigid objects. We segmented videos per gesture, resampled all videos to 25 fps, and performed video-based motion tracking with the Mediapipe Blazepose model [@lugaresiMediaPipeFrameworkBuilding2019] with metric keypoint estimation per frame (i.e., pose data for every 40 ms). For each gesture, we determined whether it was unimanual (left, right) or bimanual, and we analyzed the movement of the limb that had the longest movement path length. 
+
+For the target limb we calculated the 3D speed of the index finger, while saving information about whether the wrist, elbow, or shoulder exceeded a movement speed threshold. Our movement threshold is set at 0.15 m/s (15 cm per second), a point threshold in a common range for movement onset detection. Positions were smoothed with a Gaussian filter (SD = 2 frames, 80 ms) before computing speed, and the speed time series was smoothed once more. Note that we also report on a second method that counts any peaks that rise above 10% of the maximal speed, so as to assess the robustness of our findings (in our notebook we call this peak method 2). We submitted each speed time series of the gesturing hand to a peak analysis, where we selected local maxima (peaks) that were at least 160 ms apart and above the movement threshold. The interval between two consecutive peaks is called a submovement, and its duration is related to the number of submovements within a gesture (the number of peaks minus one). Gestures with fewer than two peaks have no such interval and are not incorporated in our analyses.
+
+In our analyses, we follow Wascher & Youngblood [-@wascherVocalEfficiencyCrows2025] by modeling each submovement's duration against the number of submovements of its gesture (both log-transformed and scaled), with a random intercept for gesture ID. This prevents that a ML pattern simply arises from averaging sub-unit durations per gesture. We extended this approach in two ways. The number of submovements was centered within the participant, with the participant mean as a separate predictor, so that the slope reflects a relation between gestures of the same participant. The slope was allowed to vary per participant [@barrRandomEffectsStructure2013]. As there are only six corpora, corpus was considered a fixed effect. Slopes per corpus and per gesture type each come from one model, with Holm-corrected p-values. 
+
+Because the intervals between peaks have to fit within the duration of a gesture, a negative relation can arise due to partial correlation [@torreCanMenzerathsLaw2021]. We therefore compared the observed slope to a null model in which peaks were placed at random within each gesture (keeping the gesture durations, the minimum distance between peaks, and a peak rate matched per participant), refitting the same model on 1000 simulated datasets. The full detailed results are reported here, and summarized in the next sections: [https://wimpouw.github.io/HumanGestureMenzerath](https://wimpouw.github.io/HumanGestureMenzerath)
+
+@fig-method1 provides visualisation of the results and @tbl-corpus-results the statistical output. Overall, there is a statistically reliable negative relation within participants. such that gestures with more submovements had shorter submovements. This slope was more negative than the slopes under the null model with randomly placed peaks. 
+
+```{r}
+#| label: setup-menzerath-results
+#| include: false
+
+library(lmerTest)   # needed so the stored lmerModLmerTest objects give Satterthwaite p-values
+library(flextable)
+library(officer)
+
+# model paths
+mods1 <- readRDS("../models/menzerath_models_method1.rds")   # peak method 1
+mods2 <- readRDS("../models/menzerath_models_method2.rds")   # peak method 2
+
+# formatting helpers
+f1 <- function(x) sprintf("%.1f", x)
+f2 <- function(x) sprintf("%.2f", x)
+f3 <- function(x) sprintf("%.3f", x)
+z  <- qnorm(0.975)
+ci_txt <- function(est, se) paste0("[", f3(est - z * se), ", ", f3(est + z * se), "]")
+num_word <- function(n) c("zero", "one", "two", "three", "four", "five",
+                          "six", "seven", "eight", "nine", "ten")[n + 1]
+cap      <- function(s) paste0(toupper(substr(s, 1, 1)), substring(s, 2))
+and_list <- function(v) if (length(v) <= 1) v else
+  paste(paste(v[-length(v)], collapse = ", "), "and", v[length(v)])
+
+# one fixed effect: estimate, 95% Wald CI, Satterthwaite p
+fx <- function(m, term) {
+  s <- coef(summary(m))[term, ]
+  list(est = unname(s["Estimate"]), se = unname(s["Std. Error"]), p = unname(s["Pr(>|t|)"]),
+       b = f3(s["Estimate"]), ci = ci_txt(s["Estimate"], s["Std. Error"]), pt = f3(s["Pr(>|t|)"]))
+}
+
+# per-level slopes from a "0 + group + group:x_within" model, with Holm correction
+slopes <- function(m, prefix) {
+  cf  <- coef(summary(m))
+  rws <- grep(":x_within$", rownames(cf), value = TRUE)
+  d <- data.frame(level = sub(paste0("^", prefix, "(.*):x_within$"), "\\1", rws),
+                  est = cf[rws, "Estimate"], se = cf[rws, "Std. Error"],
+                  p = cf[rws, "Pr(>|t|)"], row.names = NULL)
+  d$lo <- d$est - z * d$se
+  d$hi <- d$est + z * d$se
+  d$p_holm <- p.adjust(d$p, method = "holm")
+  rownames(d) <- d$level
+  d
+}
+
+# likelihood-ratio test (ML refit)
+lrt <- function(m0, m1) {
+  a <- suppressMessages(anova(m0, m1))
+  list(chisq = a$Chisq[2], df = a$Df[2], p = a$`Pr(>Chisq)`[2])
+}
+
+# AIC of log-log vs. linear model, both on the scale of the raw durations
+# (Jacobian correction for the scale(log(y)) and scale(y) transformations)
+delta_aic <- function(x) {
+  yl <- x$mod_log@frame[[1]]
+  yr <- x$mod_lin@frame[[1]]
+  n  <- length(yl)
+  sl <- attr(yl, "scaled:scale")
+  sr <- attr(yr, "scaled:scale")
+  logd <- as.numeric(yl) * sl + attr(yl, "scaled:center")
+  (AIC(x$mod_log) + 2 * sum(logd) + 2 * n * log(sl)) - (AIC(x$mod_lin) + 2 * n * log(sr))
+}
+
+# collect everything for one peak method
+extract <- function(x) {
+  r <- list()
+  r$overall <- fx(x$gesture_menz_model, "x_within")
+  r$expo    <- r$overall$est * x$sc_ges$sy / x$sc_ges$sx   # back-transformed power-law exponent
+  r$null_g  <- x$res["gestures", ]
+  r$null_o  <- x$res["manipulations", ]
+  r$corp    <- slopes(x$corpus_slope_model, "corpus")
+  r$corp_lrt <- lrt(x$gesture_menz_model, x$corpus_slope_model)
+  r$type    <- slopes(x$type_slope_model, "gesture_type")
+  r$type_lrt <- lrt(x$type_base_model, x$type_slope_model)
+  r$obj     <- fx(x$objman_menz_model, "x_within")
+  r$inter   <- fx(x$condition_model, "x_within:conditionobjman")
+  r$daic    <- delta_aic(x)
+  # sample sizes (retained gestures and participants per corpus)
+  fr <- x$gesture_menz_model@frame
+  r$n_gest <- tapply(fr$gesture_id, fr$corpus, function(v) length(unique(v)))
+  r$n_gest_total <- length(unique(fr$gesture_id))
+  r$n_spk  <- tapply(fr$speaker_id, fr$corpus, function(v) length(unique(v)))
+  # corpus groupings used in the text
+  cp <- r$corp
+  r$corp_sig_neg   <- cp$level[cp$p_holm < .05 & cp$est < 0]
+  r$corp_lost_holm <- cp$level[cp$p < .05 & cp$p_holm >= .05 & cp$est < 0]
+  r$corp_null      <- cp$level[cp$p >= .05]
+  # largest Holm-corrected p among the reliable gesture-type slopes
+  r$type_sig_pmax  <- max(r$type$p_holm[r$type$p_holm < .05])
+  r
+}
+
+r1 <- extract(mods1)
+r2 <- extract(mods2)
+n_corp <- nrow(r1$corp)
+```
+
+```{r}
+#| label: tbl-corpus-results
+#| tbl-cap: "Overview of detailed statistical results for the overall and null model as well as each corpus individually."
+#| echo: false
+
+corp_order <- c("ECOLANG", "MULTISIMO", "GESres", "SAGA", "SAGAplus", "ZHUBO")
+cp <- r1$corp[corp_order, ]
+
+tab <- data.frame(
+  model  = c("Overall", "Null model", corp_order),
+  source = c("", "",
+             "Gu et al., 2025", "Koutsombogera & Vogel, 2018",
+             "Hensel et al., 2025", "Lücking et al., 2010",
+             "Kucherenko et al., 2022", "Bao et al., 2024"),
+  beta   = c(r1$overall$est, r1$null_g[["null_mean"]], cp$est),
+  lo     = c(r1$overall$est - z * r1$overall$se, r1$null_g[["2.5%"]],  cp$lo),
+  hi     = c(r1$overall$est + z * r1$overall$se, r1$null_g[["97.5%"]], cp$hi),
+  p_num  = c(r1$overall$p, r1$null_g[["p"]], cp$p_holm),
+  p_perm = c(FALSE, TRUE, rep(FALSE, n_corp)),
+  expo   = c(sub("-", "−", f3(r1$expo)), "", rep("", n_corp)),
+  # original (pre-exclusion) counts are not stored in the model files
+  n_orig = c(7274, NA, 3694, 1188, 1029, 605, 672, 86),
+  n_excl = c(r1$n_gest_total, NA, r1$n_gest[corp_order]),
+  n_part = c(NA, NA, r1$n_spk[corp_order])
+)
+
+# APA-style p: no leading zero; permutation p at its resolution limit shown as "≤ .001"
+fmt_p <- function(p, perm) ifelse(perm & p <= .001, "≤ .001",
+                           ifelse(p < .001, "< .001", sub("^0", "", sprintf("%.3f", p))))
+tab$p <- fmt_p(tab$p_num, tab$p_perm)
+
+# true minus sign, 3 decimals; figure space keeps positive numbers aligned
+fmt <- function(x) ifelse(x < 0, sub("-", "−", sprintf("%.3f", x)),
+                          paste0(" ", sprintf("%.3f", x)))
+tab$ci     <- paste0("[", fmt(tab$lo), ", ", fmt(tab$hi), "]")
+tab$beta   <- fmt(tab$beta)
+tab$n_part <- ifelse(is.na(tab$n_part), "", tab$n_part)
+tab$n_orig <- ifelse(is.na(tab$n_orig), "", formatC(tab$n_orig, big.mark = ",", format = "d"))
+tab$n_excl <- ifelse(is.na(tab$n_excl), "", formatC(tab$n_excl, big.mark = ",", format = "d"))
+
+cols <- c("model", "beta", "ci", "p", "expo", "n_orig", "n_excl", "n_part")
+
+flextable(tab, col_keys = cols) |>
+  # corpus name + citation (grey, smaller) on a second line
+  compose(j = "model", i = 3:8, value = as_paragraph(
+    model, "\n",
+    as_chunk(source, props = fp_text_default(color = "#555555", font.size = 8.5,
+                                             font.family = "Times New Roman")))) |>
+  set_header_labels(model = "Model / corpus", beta = "β", ci = "95% CI",
+                    p = "p", expo = "Power-law\nexponent",
+                    n_orig = "Original", n_excl = "Retained", n_part = "Participants") |>
+  add_header_row(values = c("", "Estimate", "", "Sample size"),
+                 colwidths = c(1, 3, 1, 3)) |>
+    compose(part = "header", i = 2, j = "p", value = as_paragraph(
+    as_i("p"), "-value", "\n",
+    as_chunk("(Holm-corrected)",
+             props = fp_text_default(bold = FALSE, font.size = 8.5,
+                                     font.family = "Times New Roman")))) |>
+  # journal-style rules
+  border_remove() |>
+  hline_top(part = "header", border = fp_border(width = 1.5)) |>
+  hline(part = "header", i = 1, j = c(2:4, 6:8), border = fp_border(width = 0.75)) |>
+  hline_bottom(part = "header", border = fp_border(width = 1)) |>
+  hline(i = 2, border = fp_border(width = 0.75)) |>
+  hline_bottom(part = "body", border = fp_border(width = 1.5)) |>
+  bold(i = 1:2, j = "model") |>
+  italic(i = 2, j = "model") |>
+  # typography & layout
+  font(fontname = "Times New Roman", part = "all") |>
+  fontsize(size = 9.5, part = "all") |>
+  bold(part = "header") |>
+  align(j = "model", align = "left", part = "all") |>
+  align(j = 2:8, align = "center", part = "all") |>
+  valign(valign = "center", part = "all") |>
+  padding(padding.top = 3, padding.bottom = 3,
+          padding.left = 3, padding.right = 3, part = "all") |>
+  width(j = cols, width = c(1.3, 0.5, 1.05, 0.95, 0.7, 0.6, 0.6, 0.78)) |>
+  add_footer_lines(values = as_paragraph(
+    as_i("Note. "),
+    "β = slope estimate; CI = interval bounded by the 2.5% and 97.5% quantiles; ",
+    "The power-law exponent is reported for the overall model only. ",
+    "Original and Retained = number of observations before and after exclusion.")) |>
+  fontsize(part = "footer", size = 8.5) |>
+  font(fontname = "Times New Roman", part = "footer")
+```
+
+Slopes differed between corpora (χ²(`r r1$corp_lrt$df`) = `r f2(r1$corp_lrt$chisq)`, p = `r f3(r1$corp_lrt$p)`). Four out of six corpora showed a negative slope: GESres, MULTISIMO, ECOLANG and ZHUBO. After Holm correction this was reliable for the corpus `r and_list(r1$corp_sig_neg)`, but not for `r and_list(r1$corp_lost_holm)`. The slopes of `r and_list(r1$corp_null)` did not differ from zero. A log-log model fitted better than a linear model with the same structure (ΔAIC = `r f1(r1$daic)`).
+
+For the non-gestural manual actions the slope did not reliably differ from zero (β = `r r1$obj$b`, 95% CI `r r1$obj$ci`, p = `r r1$obj$pt`). However, when tested in one model against the gestures of the same corpus, the slopes of object manipulations and gestures did not reliably differ (interaction β = `r r1$inter$b`, 95% CI `r r1$inter$ci`, p = `r r1$inter$pt`), and the slope for object manipulations was also more negative than its null model (null mean = `r f3(r1$null_o[["null_mean"]])`, quantiles [`r f3(r1$null_o[["2.5%"]])`, `r f3(r1$null_o[["97.5%"]])`], p = `r f3(r1$null_o[["p"]])`).
+
+Slopes differed between gesture types (χ²(`r r1$type_lrt$df`) = `r f1(r1$type_lrt$chisq)`, p = `r f3(r1$type_lrt$p)`). Beat (β = `r f3(r1$type["beat", "est"])`, 95% CI `r ci_txt(r1$type["beat", "est"], r1$type["beat", "se"])`), representational (β = `r f3(r1$type["representational", "est"])`, 95% CI `r ci_txt(r1$type["representational", "est"], r1$type["representational", "se"])`) and pointing gestures (β = `r f3(r1$type["pointing", "est"])`, 95% CI `r ci_txt(r1$type["pointing", "est"], r1$type["pointing", "se"])`) showed reliable negative slopes (Holm-corrected p's ≤ `r f3(r1$type_sig_pmax)`), while pragmatic gestures did not (β = `r f3(r1$type["pragmatic", "est"])`, 95% CI `r ci_txt(r1$type["pragmatic", "est"], r1$type["pragmatic", "se"])`, p = `r f3(r1$type["pragmatic", "p_holm"])`).
+
+With peak method 2 the overall slope was the same and more negative than the null model (null mean = `r f3(r2$null_g[["null_mean"]])`, p = `r f3(r2$null_g[["p"]])`). `r cap(num_word(length(r2$corp_sig_neg)))` corpora showed reliable negative slopes after Holm correction (`r paste(r2$corp_sig_neg, collapse = ", ")`), against `r num_word(length(r1$corp_sig_neg))` under method 1. Here the slope for object manipulations (β = `r r2$obj$b`, 95% CI `r r2$obj$ci`) did differ from that of gestures (interaction β = `r r2$inter$b`, 95% CI `r r2$inter$ci`, p = `r r2$inter$pt`) but not from its null model (p = `r f3(r2$null_o[["p"]])`). SAGAplus showed a weak positive slope (β = `r f3(r2$corp["SAGAplus", "est"])`, 95% CI `r ci_txt(r2$corp["SAGAplus", "est"], r2$corp["SAGAplus", "se"])`, Holm-corrected p = `r f3(r2$corp["SAGAplus", "p_holm"])`). For gesture types, representational (β = `r f3(r2$type["representational", "est"])`, 95% CI `r ci_txt(r2$type["representational", "est"], r2$type["representational", "se"])`) and pointing gestures (β = `r f3(r2$type["pointing", "est"])`, 95% CI `r ci_txt(r2$type["pointing", "est"], r2$type["pointing", "se"])`) again showed negative slopes (Holm-corrected p's ≤ `r f3(r2$type_sig_pmax)`), but beat gestures did not after correction (β = `r f3(r2$type["beat", "est"])`, 95% CI `r ci_txt(r2$type["beat", "est"], r2$type["beat", "se"])`, p = `r f3(r2$type["beat", "p_holm"])`), as well as pragmatic gestures (β = `r f3(r2$type["pragmatic", "est"])`, 95% CI `r ci_txt(r2$type["pragmatic", "est"], r2$type["pragmatic", "se"])`, p = `r f3(r2$type["pragmatic", "p_holm"])`).
+
+::: {#fig-method1 fig-scap="Method"}
+![](../plots/menzerath_figure_method1.png){width=90%}
+
+\(A) Example of the peak finding procedure for the selected dominant hand for a gesture event, where the intervals between local maxima (speed peaks) constitute the submovements (method 1 and method 2 indicated). The dashed lines show the thresholds of the two peak methods; this figure reports results for peak method 1 (for peak method 2 see here). All scatter plots have scaled log-transformed number of submovements on the x-axis and scaled log-transformed submovement duration on the y-axis. Each data point contains one gesture event (median submovement duration vs. number of submovements). All lines have slopes estimated by the mixed models (the relation between number of submovements and submovement duration within speakers) and are drawn through the mean of the data points; they are not fitted to the plotted medians. (B) All corpora, with the overall within-speaker slope (black, dashed) and the slopes per corpus (colored). (C) Per corpus, with the slope of that corpus (colored, with standardized beta and Holm-corrected p) and the overall slope for reference (black, dashed). (D) The special category of non-communicative manual movements (object manipulations) provided in the ECOLANG corpus, with the within-speaker slope of the object manipulation model (black).
+:::
+
+
+## Discussion
+On the whole, we provide a statistically negative relationship in expert-defined gesture units across different methods, such that the more submovements within a gesture unit the slightly shorter their duration, in line with Menzerath’s Law. The effect sizes are however small on the whole (standardized slope of -0.096; all fixed effects together explain only 2% of the variance). Based on visual inspection of the data (@fig-method1) we can say that whenever a gesture is composed of several sub-units, the duration of each single sub-unit cannot be long. Gestures containing just two sub-units are more free to vary the duration of these sub-units. It is possible that co-speech gestures are less constrained by efficiency principles than more lexicalized and conventionalized forms of communication (e.g., signed languages). Note, however, that pragmatic gestures, which are among the more conventionalized co-speech gestures, showed no reliable relation in our gesture type analysis, as opposed to beat, representational, and pointing gestures. As 94% of the pragmatic gestures come from ECOLANG, the corpus with the weakest (but reliable) slope, this may reflect the corpus rather than the gesture type. The two related datasets, SAGA and SAGAplus, did not show a reliably negative relationship between the number of gesture submovements and submovement duration (under method 2 SAGA is also not reliable and SAGAplus is even weakly positive). In the ECOLANG where we could compare object manipulations versus gestures, these object-oriented actions showed a weaker relation than communicative gestures, but this difference was reliable in only one of the two methods. It is difficult to interpret these findings as indicating the communicative basis of ML rather than a general motor constraints for multi-movement sequences. Another factor that limits the type of conclusions we can draw is that we have not analyzed the concomitant speech.
+
+The current report has focused on the establishment of efficiency principles in human gesture. However, this report and its associated open data should mark the beginning of further study of how efficiency principles govern human gesture, inviting further confirmatory (and pre-registered) analyses based on theorization of what type of gestures might be especially susceptible to efficiency constraints, or what specific aspects of the gesture phases are shortened. For example, it has been conjectured that it might be the case that the hold times between substrokes within a gesture may be produced by the ML in primate gestures [@badihiChimpanzeeGesturalExchanges2024]. In conclusion, aside from the discovery of a weak ML scaling in human co-speech gesture across the board, and detectable in certain corpora, the current project provides the resources to further study ML using our open preprocessed dataset, and we invite more cross-linguistic and cross-modal studies of this phenomenon for truly concluding the universality of ML in human gesture. 
+
+## References
+

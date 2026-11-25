@@ -1,0 +1,36 @@
+::: {custom-style="Author"}
+Wim Pouw^1,2^, Aleksandra Ćwiek^3,4^, Šárka Kadavá^2,5,6^, Susanne Fuchs^5,7^
+:::
+
+::: {custom-style="Affiliations"}
+^1^Department of Computational Cognitive Science, Tilburg University
+
+^2^Donders Institute for Brain, Cognition, and Behaviour, Radboud University
+
+^3^Center for Language Evolution Studies, Nicolaus Copernicus University in Toruń
+
+^4^Institute of Advanced Studies, Nicolaus Copernicus University in Toruń
+
+^5^Leibniz-Centre General Linguistics (ZAS), Berlin 
+
+^6^Georg-August-Universität Göttingen
+
+^7^Forschungskolleg Humanwissenschaften, Bad Homburg
+
+:::
+
+**Email:** w.pouw@tilburguniversity.edu, fuchs@leibniz-zas.de
+
+**Author Contributions:** Wim Pouw organized the study and curated the dataset, performed the main analyses and designed the processing steps, led the writing of the manuscripts with critical revision from the co-authors, and co-conceived the research idea. Aleksandra Ćwiek contributed extensively to improving the analysis procedure and developed the null model sanity check, next to critical revisions to the manuscript. Šárka Kadavá co-conceived the research topic and critically revised the manuscript. Susanne Fuchs co-conceived the research topic and was involved in writing this topic up for a grant proposal and has critically revised the current manuscript. 
+
+**Acknowledgement:** We want to thank the developers of the datasets, ECOLANG [@guECOLANGMultimodalCorpus2025], MULTISIMO [@koutsombogeraModelingCollaborativeMultimodal2018], GESres [@henselRichlyAnnotatedDataset2025], SAGA [@luckingBielefeldSpeechGesture2010], SAGAplus [@kucherenkoSaGASpeechGestureDataset2022], ZHUBO [@baoEditableCoSpeechGesture2024].
+
+**Competing Interest Statement:** The authors have no competing interests to report.
+
+**Keywords:** Co-speech gesture, Menzerath’s law, Efficiency, Motor control, Multimodal communication
+
+**Data availability statement:** All data and analyses are archived at [https://github.com/WimPouw/HumanGestureMenzerath](https://github.com/WimPouw/HumanGestureMenzerath). The analysis notebook can be found here: [https://wimpouw.github.io/HumanGestureMenzerath/feature_processing.html](https://wimpouw.github.io/HumanGestureMenzerath/feature_processing.html). We also archive gesture animations provided in masked form, which will aid interpretability and further analyses with this dataset; a version was already released under a redistributable license CC-BY-NC-SA 4.0 license [@shaikhEnvisionGestureChallenge2026], but for computational reproducibility, the current dataset used can be downloaded on our Github also redistributable under CC-BY-NC-SA 4.0.
+
+**AI usage statement:** GenAI was not used in writing other than grammatical editing. The linear mixed regression code was reused from Wascher and Youngblood [-@wascherVocalEfficiencyCrows2025] and first adapted by the authors without AI. Claude (Fable 5.2) was used to adapt EnvisionBox code for motion tracking and peak finding, to review, correct and extend the analysis code, and to organize the Quarto documents. All code was checked by the authors. The null model analysis was conceived by the authors, and Claude (Opus 5.5) was used to revise and advise on the code.
+
+**Abstract:** Linguistics has only recently begun undoing itself from biases in what counts as language, increasingly including signed languages and co-speech gestures in its explanatory scope. It is therefore not surprising that some of the linguistic laws thought to be universal across languages have rarely been tested in manual forms of human communication, let alone at a large scale required for inferring law-like patterns. Here we show based on a large corpus with thousands of co-speech gestures across 6 datasets that a weak overall Menzerath’s law is reliably detectable, where gestures with more subunits have shorter durations of those subunits. This overall relation was weak, but detectable across datasets, and importantly stronger than expected from randomly placed subunits. Detection within datasets was variable. The overall conclusions on reliable detectability were however robust over two ways of defining subunits. Menzerath’s Law was present for almost all gesture types, but absent for pragmatic gestures, and object manipulations showed a weaker pattern that was however not consistently different from that of gestures. This study report invites a more cross-modal perspective, where the constraints that give rise to this statistical pattern may have to be sought in processes that are shared across communicative modalities, and possibly across manual actions more generally.
